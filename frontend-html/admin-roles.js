@@ -3,8 +3,8 @@
 async function cargarRoles() {
   try {
     const [usuariosRes, rolesRes] = await Promise.all([
-      fetchAuth('http://localhost:5000/usuario'),
-      fetchAuth('http://localhost:5000/usuario-rol')
+      fetchAuth(`${API_BASE}/usuario`),
+      fetchAuth(`${API_BASE}/usuario-rol`)
     ]);
 
     if (usuariosRes.ok) {
@@ -66,8 +66,8 @@ window.mostrarFormAsignarRol = async function () {
   document.getElementById('rolMsg').innerHTML = '';
   try {
     const [usuariosRes, rolesRes] = await Promise.all([
-      fetchAuth('http://localhost:5000/usuario'),
-      fetchAuth('http://localhost:5000/usuario-rol')
+      fetchAuth(`${API_BASE}/usuario`),
+      fetchAuth(`${API_BASE}/usuario-rol`)
     ]);
 
     const usuarios = await usuariosRes.json();
@@ -107,7 +107,7 @@ if (_formAsignarRol) _formAsignarRol.onsubmit = async function (e) {
   }
 
   try {
-    const res = await fetchAuth('http://localhost:5000/usuario-rol/asignar', {
+    const res = await fetchAuth(`${API_BASE}/usuario-rol/asignar`, {
       method: 'POST',
       body: JSON.stringify({ id_usuario, id_rol })
     });

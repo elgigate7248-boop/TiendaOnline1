@@ -68,7 +68,7 @@ class DashboardAnalytics {
   }
 
   async fetchData(endpoint) {
-    const response = await fetch(`http://localhost:5000${endpoint}`, {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

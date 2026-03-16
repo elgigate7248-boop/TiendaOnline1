@@ -1,5 +1,5 @@
 // producto-crud.js — CRUD completo de productos
-const API = 'http://localhost:5000';
+const API = `${API_BASE}`;
 
 function getToken() {
   return localStorage.getItem('token') || '';

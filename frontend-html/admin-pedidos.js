@@ -80,7 +80,7 @@ async function cargarUsuariosPedidoSelect(selectedId) {
   const select = document.getElementById('pedidoCrudUsuario');
   if (!select) return;
   if (!usuariosPedidoCache.length) {
-    const res = await fetchAuth('http://localhost:5000/usuario');
+    const res = await fetchAuth(`${API_BASE}/usuario`);
     const data = await safeJson(res);
     if (!res.ok) throw new Error((data && (data.error || data.mensaje)) || `HTTP ${res.status}`);
     usuariosPedidoCache = Array.isArray(data) ? data : [];
@@ -137,7 +137,7 @@ window.eliminarPedidoAdmin = async function (id) {
   }
   if (!confirm(`¿Eliminar el pedido #${id}? Esta acción revierte stock asociado y elimina pagos/detalles.`)) return;
   try {
-    const res = await fetchAuth(`http://localhost:5000/pedido/${id}`, { method: 'DELETE' });
+    const res = await fetchAuth(`${API_BASE}/pedido/${id}`, { method: 'DELETE' });
     const data = await safeJson(res);
     if (!res.ok) {
       showToast((data && (data.error || data.mensaje)) || 'No se pudo eliminar el pedido', 'error');
@@ -233,7 +233,7 @@ document.addEventListener('submit', async (e) => {
   try {
     const body = { id_usuario, id_estado, total, fecha_pedido: fecha_pedido || null };
     const isEdit = !!id;
-    const url = isEdit ? `http://localhost:5000/pedido/${id}` : 'http://localhost:5000/pedido/admin';
+    const url = isEdit ? `${API_BASE}/pedido/${id}` : `${API_BASE}/pedido/admin`;
     const method = isEdit ? 'PUT' : 'POST';
     const res = await fetchAuth(url, { method, body: JSON.stringify(body) });
     const data = await safeJson(res);
@@ -260,7 +260,7 @@ function cargarPedidos() {
   const cont = document.getElementById('pedidos');
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted py-3">Cargando pedidos...</div>';
-  fetchAuth('http://localhost:5000/pedido')
+  fetchAuth(`${API_BASE}/pedido`)
     .then(async res => {
       if (!res.ok) {
         const body = await safeJson(res);
@@ -282,7 +282,7 @@ function cargarPedidos() {
 
 window.cambiarEstadoPedido = async function (id, id_estado) {
   try {
-    const res = await fetchAuth(`http://localhost:5000/pedido/${id}`, {
+    const res = await fetchAuth(`${API_BASE}/pedido/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ id_estado })
     });

@@ -77,7 +77,7 @@ async function avanzarEstadoDemo(idPedido, idEstadoActual) {
   const nextId = Math.min(idEstadoActual + 1, 5);
   if (nextId === idEstadoActual) return;
   try {
-    const res = await fetch(`http://localhost:5000/pedido/${idPedido}`, {
+    const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ id_estado: nextId })
@@ -113,7 +113,7 @@ async function iniciarAutoSim(idPedido, idEstadoActual) {
     estado++;
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:5000/pedido/${idPedido}`, {
+      const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({ id_estado: estado })
@@ -150,7 +150,7 @@ if (!token) {
   cont.innerHTML = '<div class="alert alert-warning">ID de pedido no especificado.</div>';
 } else {
   if (bcId) bcId.textContent = `Pedido #${pedidoId}`;
-  fetch(`http://localhost:5000/pedido/${pedidoId}`, {
+  fetch(`${API_BASE}/pedido/${pedidoId}`, {
     headers: { 'Authorization': 'Bearer ' + token }
   })
     .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })

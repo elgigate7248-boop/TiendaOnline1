@@ -55,7 +55,7 @@ class CrearPedido {
   async cargarProductos() {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/producto', {
+      const response = await fetch(`${API_BASE}/producto`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -76,7 +76,7 @@ class CrearPedido {
   async cargarClientes() {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/usuario', {
+      const response = await fetch(`${API_BASE}/usuario`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -456,7 +456,7 @@ class CrearPedido {
         notas: document.getElementById('notasPedido').value
       };
 
-      const response = await fetch('http://localhost:5000/pedido/admin', {
+      const response = await fetch(`${API_BASE}/pedido/admin`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

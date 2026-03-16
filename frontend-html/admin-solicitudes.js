@@ -10,7 +10,7 @@ async function cargarSolicitudesVendedor() {
 
   cont.innerHTML = '<div class="text-muted">Cargando solicitudes...</div>';
   try {
-    const res = await fetchAuth(`http://localhost:5000/vendedor-solicitud${qs}`);
+    const res = await fetchAuth(`${API_BASE}/vendedor-solicitud${qs}`);
     const data = await safeJson(res);
     if (!res.ok) {
       renderError('solicitudesVendedorList', 'No se pudieron cargar las solicitudes.', data?.error || data?.mensaje || `HTTP ${res.status}`);
@@ -115,8 +115,8 @@ if (formResolver) {
 
     try {
       const endpoint = accion === 'aprobar'
-        ? `http://localhost:5000/vendedor-solicitud/${idSolicitud}/aprobar`
-        : `http://localhost:5000/vendedor-solicitud/${idSolicitud}/rechazar`;
+        ? `${API_BASE}/vendedor-solicitud/${idSolicitud}/aprobar`
+        : `${API_BASE}/vendedor-solicitud/${idSolicitud}/rechazar`;
       const res = await fetchAuth(endpoint, {
         method: 'POST',
         body: JSON.stringify({ comentario_admin })
@@ -158,7 +158,7 @@ async function cargarSolicitudesRepartidor() {
 
   cont.innerHTML = '<div class="text-muted">Cargando solicitudes...</div>';
   try {
-    const res = await fetchAuth(`http://localhost:5000/repartidor-solicitud${qs}`);
+    const res = await fetchAuth(`${API_BASE}/repartidor-solicitud${qs}`);
     const data = await safeJson(res);
     if (!res.ok) {
       renderError('solicitudesRepartidorList', 'No se pudieron cargar las solicitudes.', data?.error || `HTTP ${res.status}`);
@@ -247,8 +247,8 @@ if (formResolverRepartidor) {
 
     try {
       const endpoint = accion === 'aprobar'
-        ? `http://localhost:5000/repartidor-solicitud/${idSolicitud}/aprobar`
-        : `http://localhost:5000/repartidor-solicitud/${idSolicitud}/rechazar`;
+        ? `${API_BASE}/repartidor-solicitud/${idSolicitud}/aprobar`
+        : `${API_BASE}/repartidor-solicitud/${idSolicitud}/rechazar`;
       const res = await fetchAuth(endpoint, { method: 'POST', body: JSON.stringify({ comentario_admin }) });
       const data = await safeJson(res);
       if (res.ok) {

@@ -1,9 +1,9 @@
 async function cargarDashboard() {
   try {
     const [productosRes, usuariosRes, pedidosRes] = await Promise.all([
-      fetchAuth('http://localhost:5000/producto'),
-      fetchAuth('http://localhost:5000/usuario'),
-      fetchAuth('http://localhost:5000/pedido')
+      fetchAuth(`${API_BASE}/producto`),
+      fetchAuth(`${API_BASE}/usuario`),
+      fetchAuth(`${API_BASE}/pedido`)
     ]);
 
     const productos = await productosRes.json();
@@ -39,7 +39,7 @@ function formatearDinero(valor) {
 
 window.descargarReporteCsv = async function () {
   try {
-    const res = await fetchAuth('http://localhost:5000/pedido/reportes/resumen/csv?top=5', {
+    const res = await fetchAuth(`${API_BASE}/pedido/reportes/resumen/csv?top=5`, {
       headers: {
         Authorization: 'Bearer ' + token,
         Accept: 'text/csv'
@@ -76,7 +76,7 @@ async function cargarEstadisticas() {
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted py-4 text-center">Cargando estadísticas...</div>';
   try {
-    const res = await fetchAuth('http://localhost:5000/pedido/reportes/resumen?top=5');
+    const res = await fetchAuth(`${API_BASE}/pedido/reportes/resumen?top=5`);
     const data = await safeJson(res);
     if (!res.ok || !data) {
       renderError('estadisticas', 'No se pudieron cargar las estadísticas.', data?.error || data?.mensaje || `HTTP ${res.status}`);

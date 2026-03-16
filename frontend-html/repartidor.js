@@ -65,7 +65,7 @@ async function cargarPedidos() {
   if (!cont) return;
   cont.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border me-2"></span>Cargando pedidos...</div>';
   try {
-    const res = await fetch('http://localhost:5000/pedido/repartidor/asignados', {
+    const res = await fetch(`${API_BASE}/pedido/repartidor/asignados`, {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -188,7 +188,7 @@ async function cambiarEstado(idPedido, nuevoEstado) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Actualizando...'; }
 
   try {
-    const res = await fetch(`http://localhost:5000/pedido/${idPedido}`, {
+    const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
       body: JSON.stringify({ id_estado: nuevoEstado })

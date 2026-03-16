@@ -1,6 +1,6 @@
 async function getCatalogo() {
   try {
-    const res = await fetch('http://localhost:5000/producto');
+    const res = await fetch(`${API_BASE}/producto`);
     if (!res.ok) throw new Error("Fallo en red");
     const data = await res.json();
     return Array.isArray(data) ? data : [];

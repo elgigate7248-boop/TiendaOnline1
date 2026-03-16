@@ -56,7 +56,7 @@ class GestionPedidos {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/pedido', {
+      const response = await fetch(`${API_BASE}/pedido`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -77,7 +77,7 @@ class GestionPedidos {
   async cargarEstadisticas() {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/pedido/reportes/resumen', {
+      const response = await fetch(`${API_BASE}/pedido/reportes/resumen`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -233,7 +233,7 @@ class GestionPedidos {
   async verDetalle(idPedido) {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/pedido/${idPedido}`, {
+      const response = await fetch(`${API_BASE}/pedido/${idPedido}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -344,7 +344,7 @@ class GestionPedidos {
       const notas = document.getElementById('notasEstado').value;
       
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/pedido/${idPedido}`, {
+      const response = await fetch(`${API_BASE}/pedido/${idPedido}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -377,7 +377,7 @@ class GestionPedidos {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/pedido/${idPedido}`, {
+      const response = await fetch(`${API_BASE}/pedido/${idPedido}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -403,7 +403,7 @@ class GestionPedidos {
   async exportarPedidos() {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/pedido/reportes/resumen/csv', {
+      const response = await fetch(`${API_BASE}/pedido/reportes/resumen/csv`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

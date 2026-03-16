@@ -48,7 +48,7 @@ async function cargarDepartamentosDomicilio() {
   }
   deptoEl.disabled = true;
   try {
-    const res = await fetch('http://localhost:5000/ubicacion/departamentos');
+    const res = await fetch(`${API_BASE}/ubicacion/departamentos`);
     const data = await res.json();
     if (!res.ok) {
       deptoEl.innerHTML = '<option value="">No disponible</option>';
@@ -75,7 +75,7 @@ async function cargarCiudadesDomicilioPorDepartamento(codigoDepto, ciudadSelecci
   ciudadEl.disabled = true;
   ciudadEl.innerHTML = '<option value="">Cargando...</option>';
   try {
-    const res = await fetch('http://localhost:5000/ubicacion/ciudades?departamento=' + encodeURIComponent(dep));
+    const res = await fetch(`${API_BASE}/ubicacion/ciudades?departamento=` + encodeURIComponent(dep));
     const data = await res.json();
     if (!res.ok) {
       ciudadEl.innerHTML = '<option value="">No disponible</option>';

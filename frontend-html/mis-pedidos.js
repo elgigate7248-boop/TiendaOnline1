@@ -64,7 +64,7 @@ if (!token) {
     </div>`;
 } else {
   cont.innerHTML = '<div class="text-muted text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Cargando pedidos...</div>';
-  fetch('http://localhost:5000/pedido/mis-pedidos', {
+  fetch(`${API_BASE}/pedido/mis-pedidos`, {
     headers: { 'Authorization': 'Bearer ' + token }
   })
     .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })

@@ -5,7 +5,7 @@ async function cargarVendedores() {
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted py-3">Cargando vendedores...</div>';
   try {
-    const res = await fetch('http://localhost:5000/resena/vendedores/ratings');
+    const res = await fetch(`${API_BASE}/resena/vendedores/ratings`);
     const data = await res.json();
     const arr = Array.isArray(data) ? data : [];
     let html = `
@@ -68,7 +68,7 @@ window.verResenasVendedor = async function (idVendedor, nombre) {
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted py-2">Cargando reseñas...</div>';
   try {
-    const res = await fetch(`http://localhost:5000/resena/vendedor/${idVendedor}`);
+    const res = await fetch(`${API_BASE}/resena/vendedor/${idVendedor}`);
     const data = await res.json();
     const arr = Array.isArray(data) ? data : [];
     if (!arr.length) {

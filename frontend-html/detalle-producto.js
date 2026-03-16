@@ -34,7 +34,7 @@ async function cargarResenas(idProducto) {
   contResenas.innerHTML = '<div class="text-muted">Cargando reseñas...</div>';
 
   try {
-    const res = await fetch(`http://localhost:5000/resena/producto/${idProducto}`);
+    const res = await fetch(`${API_BASE}/resena/producto/${idProducto}`);
     const resenas = await res.json();
 
     const roles = getRoles();
@@ -168,7 +168,7 @@ async function cargarResenas(idProducto) {
 
         try {
           const token = getToken();
-          const resp = await fetch(`http://localhost:5000/resena/producto/${idProducto}`, {
+          const resp = await fetch(`${API_BASE}/resena/producto/${idProducto}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -216,7 +216,7 @@ function pushVisto(producto) {
 async function cargarSimilares(prod) {
   if (!contSimilares) return;
   try {
-    const res = await fetch('http://localhost:5000/producto');
+    const res = await fetch(`${API_BASE}/producto`);
     const productos = await res.json();
     const similares = (productos || [])
       .filter(p => String(p.id_producto) !== String(prod.id_producto))
@@ -262,7 +262,7 @@ async function cargarSimilares(prod) {
 if (!id) {
   cont.innerHTML = '<div class="alert alert-danger">ID de producto no especificado.</div>';
 } else {
-  fetch(`http://localhost:5000/producto/${id}`)
+  fetch(`${API_BASE}/producto/${id}`)
     .then(res => res.json())
     .then(prod => {
       if (!prod) {
@@ -354,7 +354,7 @@ if (!id) {
       const secAtr = document.getElementById('seccionAtributos');
       const listAtr = document.getElementById('atributosList');
       if (secAtr && listAtr) {
-        fetch(`http://localhost:5000/producto/${prod.id_producto || prod.id}/atributos`)
+        fetch(`${API_BASE}/producto/${prod.id_producto || prod.id}/atributos`)
           .then(r => r.json())
           .then(atributos => {
             if (!Array.isArray(atributos) || !atributos.length) {

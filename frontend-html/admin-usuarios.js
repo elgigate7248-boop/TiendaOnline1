@@ -68,7 +68,7 @@ window.editarUsuarioAdmin = async function (id) {
   }
   ensureUsuarioModal();
   try {
-    const res = await fetchAuth(`http://localhost:5000/usuario/${id}`);
+    const res = await fetchAuth(`${API_BASE}/usuario/${id}`);
     const data = await safeJson(res);
     if (!res.ok || !data) {
       showToast((data && (data.error || data.mensaje)) || 'No se pudo cargar el usuario', 'error');
@@ -96,7 +96,7 @@ window.eliminarUsuarioAdmin = async function (id) {
   }
   if (!confirm(`¿Eliminar el usuario #${id}?`)) return;
   try {
-    const res = await fetchAuth(`http://localhost:5000/usuario/${id}`, { method: 'DELETE' });
+    const res = await fetchAuth(`${API_BASE}/usuario/${id}`, { method: 'DELETE' });
     const data = await safeJson(res);
     if (!res.ok) {
       showToast((data && (data.error || data.mensaje)) || 'No se pudo eliminar el usuario', 'error');
@@ -130,7 +130,7 @@ document.addEventListener('submit', async (e) => {
     const body = isEdit
       ? { nombre, email, telefono: telefono || null }
       : { nombre, email, telefono: telefono || null, password };
-    const res = await fetchAuth(isEdit ? `http://localhost:5000/usuario/${id}` : 'http://localhost:5000/usuario', {
+    const res = await fetchAuth(isEdit ? `${API_BASE}/usuario/${id}` : `${API_BASE}/usuario`, {
       method: isEdit ? 'PUT' : 'POST',
       body: JSON.stringify(body)
     });
@@ -160,8 +160,8 @@ async function cargarUsuarios() {
   cont.innerHTML = '<div class="text-muted py-3">Cargando usuarios...</div>';
   try {
     const [usuariosRes, vendedorRatingsRes] = await Promise.all([
-      fetchAuth('http://localhost:5000/usuario'),
-      fetch('http://localhost:5000/resena/vendedores/ratings')
+      fetchAuth(`${API_BASE}/usuario`),
+      fetch(`${API_BASE}/resena/vendedores/ratings`)
     ]);
     if (!usuariosRes.ok) {
       const body = await safeJson(usuariosRes);

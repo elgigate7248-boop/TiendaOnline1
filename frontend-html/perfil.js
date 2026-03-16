@@ -12,7 +12,7 @@ function getToken() {
 
 async function cargarCategorias() {
   try {
-    const res = await fetch('http://localhost:5000/categoria');
+    const res = await fetch(`${API_BASE}/categoria`);
     return await res.json();
   } catch {
     return [];
@@ -21,7 +21,7 @@ async function cargarCategorias() {
 
 async function cargarMasVendidosPorCategoria(idCategoria, limit = 4) {
   try {
-    const res = await fetch(`http://localhost:5000/producto/mas-vendidos/${idCategoria}?limit=${limit}`);
+    const res = await fetch(`${API_BASE}/producto/mas-vendidos/${idCategoria}?limit=${limit}`);
     return await res.json();
   } catch {
     return [];
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!estadoCont) return;
     estadoCont.innerHTML = '<div class="text-muted">Cargando estado...</div>';
     try {
-      const res = await fetchAuth('http://localhost:5000/vendedor-solicitud/mia');
+      const res = await fetchAuth(`${API_BASE}/vendedor-solicitud/mia`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       };
 
       try {
-        const res = await fetchAuth('http://localhost:5000/vendedor-solicitud', {
+        const res = await fetchAuth(`${API_BASE}/vendedor-solicitud`, {
           method: 'POST',
           body: JSON.stringify(payload)
         });
@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!rsrEstadoCont) return;
     rsrEstadoCont.innerHTML = '<div class="text-muted small">Cargando estado...</div>';
     try {
-      const res = await fetchAuth('http://localhost:5000/repartidor-solicitud/mia');
+      const res = await fetchAuth(`${API_BASE}/repartidor-solicitud/mia`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       };
 
       try {
-        const res = await fetchAuth('http://localhost:5000/repartidor-solicitud', {
+        const res = await fetchAuth(`${API_BASE}/repartidor-solicitud`, {
           method: 'POST',
           body: JSON.stringify(payload)
         });

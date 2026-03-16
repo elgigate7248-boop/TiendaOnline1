@@ -257,7 +257,7 @@ async function cargarResultados() {
 
   contResultados.innerHTML = '<div class="col-12 text-muted py-3">Buscando productos...</div>';
   try {
-    const res = await fetch('http://localhost:5000/producto');
+    const res = await fetch(`${API_BASE}/producto`);
     const productos = await res.json();
     const lista = Array.isArray(productos) ? productos : [];
     const q = normalizar(termino);

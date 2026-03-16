@@ -125,7 +125,7 @@ renderAuthNav();
   let catalogoPromise = null;
   async function obtenerCatalogo() {
     if (!catalogoPromise) {
-      catalogoPromise = fetch('http://localhost:5000/producto')
+      catalogoPromise = fetch(`${API_BASE}/producto`)
         .then((res) => res.json())
         .then((rows) => Array.isArray(rows) ? rows : [])
         .catch(() => []);

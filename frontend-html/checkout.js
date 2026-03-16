@@ -17,7 +17,7 @@ async function cargarDepartamentos() {
   if (!deptoEl) return;
   deptoEl.disabled = true;
   try {
-    const res = await fetch('http://localhost:5000/ubicacion/departamentos');
+    const res = await fetch(`${API_BASE}/ubicacion/departamentos`);
     const data = await res.json();
     if (!res.ok) {
       deptoEl.innerHTML = '<option value="">No disponible</option>';
@@ -45,7 +45,7 @@ async function cargarCiudadesPorDepartamento(codigoDepto, ciudadSeleccionada) {
   ciudadEl.disabled = true;
   ciudadEl.innerHTML = '<option value="">Cargando...</option>';
   try {
-    const res = await fetch('http://localhost:5000/ubicacion/ciudades?departamento=' + encodeURIComponent(dep));
+    const res = await fetch(`${API_BASE}/ubicacion/ciudades?departamento=` + encodeURIComponent(dep));
     const data = await res.json();
     if (!res.ok) {
       ciudadEl.innerHTML = '<option value="">No disponible</option>';
@@ -233,7 +233,7 @@ document.getElementById('checkoutForm').onsubmit = async function (e) {
       total: carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0),
       detalles: carrito.map(item => ({ id_producto: item.id, cantidad: item.cantidad, precio_unitario: item.precio }))
     };
-    const res = await fetch('http://localhost:5000/pedido', {
+    const res = await fetch(`${API_BASE}/pedido`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify(pedido)

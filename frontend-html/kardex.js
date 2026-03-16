@@ -3,8 +3,8 @@
 
 class KardexSystem {
     constructor() {
-        this.apiBase = 'http://localhost:5000/kardex';
-        this.productosBase = 'http://localhost:5000/producto';
+        this.apiBase = `${API_BASE}/kardex`;
+        this.productosBase = `${API_BASE}/producto`;
         this.token = localStorage.getItem('token');
         this.movimientos = [];
         this.productos = [];

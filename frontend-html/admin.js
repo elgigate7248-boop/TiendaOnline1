@@ -63,9 +63,9 @@ async function cargarDashboard() {
   try {
     // Cargar estadísticas básicas
     const [productosRes, usuariosRes, pedidosRes] = await Promise.all([
-      fetchAuth('http://localhost:5000/producto'),
-      fetchAuth('http://localhost:5000/usuario'),
-      fetchAuth('http://localhost:5000/pedido')
+      fetchAuth(`${API_BASE}/producto`),
+      fetchAuth(`${API_BASE}/usuario`),
+      fetchAuth(`${API_BASE}/pedido`)
     ]);
 
     const productos = await productosRes.json();
@@ -104,7 +104,7 @@ function formatearDinero(valor) {
 
 window.descargarReporteCsv = async function () {
   try {
-    const res = await fetchAuth('http://localhost:5000/pedido/reportes/resumen/csv?top=5', {
+    const res = await fetchAuth(`${API_BASE}/pedido/reportes/resumen/csv?top=5`, {
       headers: {
         Authorization: 'Bearer ' + token,
         Accept: 'text/csv'
@@ -141,7 +141,7 @@ async function cargarEstadisticas() {
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted py-4 text-center">Cargando estadísticas...</div>';
   try {
-    const res = await fetchAuth('http://localhost:5000/pedido/reportes/resumen?top=5');
+    const res = await fetchAuth(`${API_BASE}/pedido/reportes/resumen?top=5`);
     const data = await safeJson(res);
     if (!res.ok || !data) {
       renderError('estadisticas', 'No se pudieron cargar las estadísticas.', data?.error || data?.mensaje || `HTTP ${res.status}`);
@@ -194,7 +194,7 @@ async function abrirCrearProducto() {
   document.getElementById('modalProductoLabel').textContent = 'Nuevo Producto';
   const select = document.getElementById('prodCategoria');
   try {
-    const res = await fetchAuth('http://localhost:5000/categoria');
+    const res = await fetchAuth(`${API_BASE}/categoria`);
     if (res.ok) {
       const cats = await res.json();
       select.innerHTML = '<option value="">Seleccionar...</option>' + 
@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function cargarProductos() {
   const cont = document.getElementById('productosList');
   cont.innerHTML = '<tr><td colspan="7" class="text-center py-4"><div class="text-muted">Cargando productos...</div></td></tr>';
-  fetchAuth('http://localhost:5000/producto')
+  fetchAuth(`${API_BASE}/producto`)
     .then(async res => {
       if (!res.ok) {
         const body = await safeJson(res);
@@ -304,7 +304,7 @@ function cargarProductos() {
 function cargarCategorias() {
   const cont = document.getElementById('categorias');
   cont.innerHTML = '<div class="text-muted py-3">Cargando categorías...</div>';
-  fetchAuth('http://localhost:5000/categoria')
+  fetchAuth(`${API_BASE}/categoria`)
     .then(async res => {
       if (!res.ok) {
         const body = await safeJson(res);
@@ -420,7 +420,7 @@ window.editarUsuarioAdmin = async function (id) {
   }
   ensureUsuarioModal();
   try {
-    const res = await fetchAuth(`http://localhost:5000/usuario/${id}`);
+    const res = await fetchAuth(`${API_BASE}/usuario/${id}`);
     const data = await safeJson(res);
     if (!res.ok || !data) {
       showToast((data && (data.error || data.mensaje)) || 'No se pudo cargar el usuario', 'error');
@@ -448,7 +448,7 @@ window.eliminarUsuarioAdmin = async function (id) {
   }
   if (!confirm(`¿Eliminar el usuario #${id}?`)) return;
   try {
-    const res = await fetchAuth(`http://localhost:5000/usuario/${id}`, { method: 'DELETE' });
+    const res = await fetchAuth(`${API_BASE}/usuario/${id}`, { method: 'DELETE' });
     const data = await safeJson(res);
     if (!res.ok) {
       showToast((data && (data.error || data.mensaje)) || 'No se pudo eliminar el usuario', 'error');
@@ -482,7 +482,7 @@ document.addEventListener('submit', async (e) => {
     const body = isEdit
       ? { nombre, email, telefono: telefono || null }
       : { nombre, email, telefono: telefono || null, password };
-    const res = await fetchAuth(isEdit ? `http://localhost:5000/usuario/${id}` : 'http://localhost:5000/usuario', {
+    const res = await fetchAuth(isEdit ? `${API_BASE}/usuario/${id}` : `${API_BASE}/usuario`, {
       method: isEdit ? 'PUT' : 'POST',
       body: JSON.stringify(body)
     });
@@ -511,8 +511,8 @@ async function cargarUsuarios() {
   cont.innerHTML = '<div class="text-muted py-3">Cargando usuarios...</div>';
   try {
     const [usuariosRes, vendedorRatingsRes] = await Promise.all([
-      fetchAuth('http://localhost:5000/usuario'),
-      fetch('http://localhost:5000/resena/vendedores/ratings')
+      fetchAuth(`${API_BASE}/usuario`),
+      fetch(`${API_BASE}/resena/vendedores/ratings`)
     ]);
     if (!usuariosRes.ok) {
       const body = await safeJson(usuariosRes);
@@ -685,7 +685,7 @@ async function cargarUsuariosPedidoSelect(selectedId) {
   const select = document.getElementById('pedidoCrudUsuario');
   if (!select) return;
   if (!usuariosPedidoCache.length) {
-    const res = await fetchAuth('http://localhost:5000/usuario');
+    const res = await fetchAuth(`${API_BASE}/usuario`);
     const data = await safeJson(res);
     if (!res.ok) throw new Error((data && (data.error || data.mensaje)) || `HTTP ${res.status}`);
     usuariosPedidoCache = Array.isArray(data) ? data : [];
@@ -742,7 +742,7 @@ window.eliminarPedidoAdmin = async function (id) {
   }
   if (!confirm(`¿Eliminar el pedido #${id}? Esta acción revierte stock asociado y elimina pagos/detalles.`)) return;
   try {
-    const res = await fetchAuth(`http://localhost:5000/pedido/${id}`, { method: 'DELETE' });
+    const res = await fetchAuth(`${API_BASE}/pedido/${id}`, { method: 'DELETE' });
     const data = await safeJson(res);
     if (!res.ok) {
       showToast((data && (data.error || data.mensaje)) || 'No se pudo eliminar el pedido', 'error');
@@ -838,7 +838,7 @@ document.addEventListener('submit', async (e) => {
   try {
     const body = { id_usuario, id_estado, total, fecha_pedido: fecha_pedido || null };
     const isEdit = !!id;
-    const url = isEdit ? `http://localhost:5000/pedido/${id}` : 'http://localhost:5000/pedido/admin';
+    const url = isEdit ? `${API_BASE}/pedido/${id}` : `${API_BASE}/pedido/admin`;
     const method = isEdit ? 'PUT' : 'POST';
     const res = await fetchAuth(url, { method, body: JSON.stringify(body) });
     const data = await safeJson(res);
@@ -864,7 +864,7 @@ document.addEventListener('submit', async (e) => {
 function cargarPedidos() {
   const cont = document.getElementById('pedidos');
   cont.innerHTML = '<div class="text-muted py-3">Cargando pedidos...</div>';
-  fetchAuth('http://localhost:5000/pedido')
+  fetchAuth(`${API_BASE}/pedido`)
     .then(async res => {
       if (!res.ok) {
         const body = await safeJson(res);
@@ -890,7 +890,7 @@ async function cargarVendedores() {
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted py-3">Cargando vendedores...</div>';
   try {
-    const res = await fetch('http://localhost:5000/resena/vendedores/ratings');
+    const res = await fetch(`${API_BASE}/resena/vendedores/ratings`);
     const data = await res.json();
     const arr = Array.isArray(data) ? data : [];
     let html = `
@@ -953,7 +953,7 @@ window.verResenasVendedor = async function(idVendedor, nombre) {
   if (!cont) return;
   cont.innerHTML = '<div class="text-muted py-2">Cargando reseñas...</div>';
   try {
-    const res = await fetch(`http://localhost:5000/resena/vendedor/${idVendedor}`);
+    const res = await fetch(`${API_BASE}/resena/vendedor/${idVendedor}`);
     const data = await res.json();
     const arr = Array.isArray(data) ? data : [];
     if (!arr.length) {
@@ -989,8 +989,8 @@ window.verResenasVendedor = async function(idVendedor, nombre) {
 async function cargarRoles() {
   try {
     const [usuariosRes, rolesRes] = await Promise.all([
-      fetchAuth('http://localhost:5000/usuario'),
-      fetchAuth('http://localhost:5000/usuario-rol')
+      fetchAuth(`${API_BASE}/usuario`),
+      fetchAuth(`${API_BASE}/usuario-rol`)
     ]);
 
     // Usuarios con roles
@@ -1056,8 +1056,8 @@ window.mostrarFormAsignarRol = async function() {
   // Cargar usuarios y roles en los selects
   try {
     const [usuariosRes, rolesRes] = await Promise.all([
-      fetchAuth('http://localhost:5000/usuario'),
-      fetchAuth('http://localhost:5000/usuario-rol')
+      fetchAuth(`${API_BASE}/usuario`),
+      fetchAuth(`${API_BASE}/usuario-rol`)
     ]);
 
     const usuarios = await usuariosRes.json();
@@ -1097,7 +1097,7 @@ if (_formAsignarRol) _formAsignarRol.onsubmit = async function(e) {
   }
 
   try {
-    const res = await fetchAuth('http://localhost:5000/usuario-rol/asignar', {
+    const res = await fetchAuth(`${API_BASE}/usuario-rol/asignar`, {
       method: 'POST',
       body: JSON.stringify({ id_usuario, id_rol })
     });
@@ -1145,7 +1145,7 @@ async function cargarSolicitudesVendedor() {
 
   cont.innerHTML = '<div class="text-muted">Cargando solicitudes...</div>';
   try {
-    const res = await fetchAuth(`http://localhost:5000/vendedor-solicitud${qs}`);
+    const res = await fetchAuth(`${API_BASE}/vendedor-solicitud${qs}`);
     const data = await safeJson(res);
     if (!res.ok) {
       renderError('solicitudesVendedorList', 'No se pudieron cargar las solicitudes.', data?.error || data?.mensaje || `HTTP ${res.status}`);
@@ -1250,8 +1250,8 @@ if (formResolver) {
 
     try {
       const endpoint = accion === 'aprobar'
-        ? `http://localhost:5000/vendedor-solicitud/${idSolicitud}/aprobar`
-        : `http://localhost:5000/vendedor-solicitud/${idSolicitud}/rechazar`;
+        ? `${API_BASE}/vendedor-solicitud/${idSolicitud}/aprobar`
+        : `${API_BASE}/vendedor-solicitud/${idSolicitud}/rechazar`;
       const res = await fetchAuth(endpoint, {
         method: 'POST',
         body: JSON.stringify({ comentario_admin })
@@ -1294,7 +1294,7 @@ if (_formProductoInit) _formProductoInit.onsubmit = async function (e) {
   const msg = document.getElementById('prodMsg');
   msg.textContent = '';
   try {
-    const res = await fetchAuth('http://localhost:5000/producto', {
+    const res = await fetchAuth(`${API_BASE}/producto`, {
       method: 'POST',
       body: JSON.stringify({ nombre, descripcion, precio, stock, id_categoria, imagen })
     });
@@ -1313,8 +1313,8 @@ window.editarProducto = async function (id) {
   try {
     // Cargar producto individual y categorías en paralelo
     const [resProducto, resCat] = await Promise.all([
-      fetchAuth(`http://localhost:5000/producto/${id}`),
-      fetchAuth('http://localhost:5000/categoria')
+      fetchAuth(`${API_BASE}/producto/${id}`),
+      fetchAuth(`${API_BASE}/categoria`)
     ]);
     if (!resProducto.ok) {
       showToast('Producto no encontrado', 'warning');
@@ -1358,7 +1358,7 @@ window.editarProducto = async function (id) {
         imagen: document.getElementById('prodImagen').value
       };
       try {
-        const resUpd = await fetchAuth(`http://localhost:5000/producto/${id}`, {
+        const resUpd = await fetchAuth(`${API_BASE}/producto/${id}`, {
           method: 'PUT',
           body: JSON.stringify(body)
         });
@@ -1390,7 +1390,7 @@ window.editarProducto = async function (id) {
 window.eliminarProducto = async function (id) {
   if (!confirm('¿Seguro que deseas eliminar este producto? Esta acción no se puede deshacer.')) return;
   try {
-    const res = await fetchAuth(`http://localhost:5000/producto/${id}`, { method: 'DELETE' });
+    const res = await fetchAuth(`${API_BASE}/producto/${id}`, { method: 'DELETE' });
     if (res.ok) {
       cargarProductos();
       showToast('Producto eliminado correctamente', 'success');
@@ -1414,7 +1414,7 @@ document.getElementById('formCategoria').onsubmit = async function (e) {
   const nombre = document.getElementById('catNombre').value;
   const id = document.getElementById('formCategoria').dataset.id;
   try {
-    const res = await fetchAuth('http://localhost:5000/categoria' + (id ? '/' + id : ''), {
+    const res = await fetchAuth(`${API_BASE}/categoria` + (id ? '/' + id : ''), {
       method: id ? 'PUT' : 'POST',
       body: JSON.stringify({ nombre })
     });
@@ -1427,7 +1427,7 @@ document.getElementById('formCategoria').onsubmit = async function (e) {
 
 window.editarCategoria = async function (id) {
   try {
-    const res = await fetchAuth('http://localhost:5000/categoria');
+    const res = await fetchAuth(`${API_BASE}/categoria`);
     const categorias = await res.json();
     const c = categorias.find(item => (item.id_categoria || item.id) == id);
     if (!c) {
@@ -1445,7 +1445,7 @@ window.editarCategoria = async function (id) {
 window.eliminarCategoria = async function (id) {
   if (!confirm('¿Seguro que deseas eliminar esta categoría?')) return;
   try {
-    const res = await fetchAuth(`http://localhost:5000/categoria/${id}`, { method: 'DELETE' });
+    const res = await fetchAuth(`${API_BASE}/categoria/${id}`, { method: 'DELETE' });
     if (res.ok) {
       cargarCategorias();
       showToast('Categoría eliminada correctamente', 'success');
@@ -1455,7 +1455,7 @@ window.eliminarCategoria = async function (id) {
 
 window.cambiarEstadoPedido = async function (id, id_estado) {
   try {
-    const res = await fetchAuth(`http://localhost:5000/pedido/${id}`, {
+    const res = await fetchAuth(`${API_BASE}/pedido/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ id_estado })
     });
@@ -1479,7 +1479,7 @@ let productoAtributosId = null;
 window.gestionarAtributos = async function (id) {
   productoAtributosId = id;
   try {
-    const res = await fetchAuth(`http://localhost:5000/producto/${id}/atributos`);
+    const res = await fetchAuth(`${API_BASE}/producto/${id}/atributos`);
     const atributos = await res.json();
     renderFormAtributos(atributos);
     new bootstrap.Modal(document.getElementById('modalAtributos')).show();
@@ -1588,7 +1588,7 @@ if (_formAtributos) _formAtributos.onsubmit = async function (e) {
   });
   const msg = document.getElementById('atributosMsg');
   try {
-    const res = await fetchAuth(`http://localhost:5000/producto/${productoAtributosId}/atributos`, {
+    const res = await fetchAuth(`${API_BASE}/producto/${productoAtributosId}/atributos`, {
       method: 'PUT',
       body: JSON.stringify(atributos)
     });

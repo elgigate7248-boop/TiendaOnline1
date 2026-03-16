@@ -187,7 +187,7 @@ class StripeCheckout {
 
     try {
       // Crear Payment Intent en el backend
-      const response = await fetch('http://localhost:5000/payment/create-payment-intent', {
+      const response = await fetch(`${API_BASE}/payment/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -293,7 +293,7 @@ class StripeCheckout {
   }
 
   async confirmPaymentBackend(paymentIntentId) {
-    const response = await fetch('http://localhost:5000/payment/confirm-payment', {
+    const response = await fetch(`${API_BASE}/payment/confirm-payment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

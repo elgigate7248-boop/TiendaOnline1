@@ -55,7 +55,7 @@ if (esAdmin) {
 
 function cargarCategorias() {
   cont.innerHTML = '<div class="text-muted text-center py-3">Cargando categorías...</div>';
-  fetch('http://localhost:5000/categoria')
+  fetch(`${API_BASE}/categoria`)
     .then(res => res.json())
     .then(data => {
       categorias = Array.isArray(data) ? data : [];
@@ -140,7 +140,7 @@ window.verProductosCategoria = async function(idCat, nombre) {
   grid.innerHTML = '<div class="col-12 text-muted text-center py-3">Cargando productos...</div>';
 
   try {
-    const res = await fetch(`http://localhost:5000/producto`);
+    const res = await fetch(`${API_BASE}/producto`);
     const todos = await res.json();
     const productos = (Array.isArray(todos) ? todos : []).filter(p => String(p.id_categoria) === String(idCat));
 
@@ -200,7 +200,7 @@ async function crearCategoria(e) {
   const msg = document.getElementById('catMsg');
   msg.textContent = '';
   try {
-    const res = await fetch('http://localhost:5000/categoria', {
+    const res = await fetch(`${API_BASE}/categoria`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ nombre, descripcion })
@@ -236,7 +236,7 @@ async function actualizarCategoria(e, id) {
   const msg = document.getElementById('catMsg');
   msg.textContent = '';
   try {
-    const res = await fetch(`http://localhost:5000/categoria/${id}`, {
+    const res = await fetch(`${API_BASE}/categoria/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ nombre, descripcion })
@@ -257,7 +257,7 @@ window.eliminarCategoria = function(id) {
   const cat = categorias.find(c => (c.id_categoria || c.id) == id);
   if (!cat) return;
   if (!confirm(`¿Eliminar la categoría "${cat.nombre}"?`)) return;
-  fetch(`http://localhost:5000/categoria/${id}`, {
+  fetch(`${API_BASE}/categoria/${id}`, {
     method: 'DELETE',
     headers: { 'Authorization': 'Bearer ' + token }
   })
