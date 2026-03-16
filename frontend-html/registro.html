@@ -47,7 +47,7 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Registrando...';
       try {
-        const res = await fetch('http://localhost:5000/usuario/registro', {
+        const res = await fetch(`${API_BASE}/usuario/registro`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nombre, email, password })
