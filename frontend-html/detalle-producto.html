@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle Producto - Tienda Online</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="ml-header">
+    <div class="container py-2">
+      <div class="d-flex gap-3 align-items-center">
+        <a class="ml-brand" href="index.html">Tienda Online</a>
+        <form class="flex-grow-1" role="search" onsubmit="return false;">
+          <input class="form-control" type="search" placeholder="Buscar productos, marcas y más..." aria-label="Buscar">
+        </form>
+        <a class="btn btn-outline-dark position-relative" href="carrito.html" aria-label="Carrito">
+          Carrito
+          <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
+        </a>
+      </div>
+
+      <div class="d-flex gap-3 mt-2 small align-items-center flex-wrap">
+        <a class="text-dark text-decoration-none" href="categorias.html">Categorías</a>
+        <a class="text-dark text-decoration-none" href="producto.html">Productos</a>
+        <a class="text-dark text-decoration-none" href="mis-pedidos.html">Mis pedidos</a>
+        <span id="navAdmin" style="display:none;"><a class="text-dark text-decoration-none" href="admin.html">Administración</a></span>
+        <span id="navGuest"><a class="text-dark text-decoration-none" href="login.html">Iniciar sesión</a> <a class="text-dark text-decoration-none" href="registro.html">Registrarse</a></span>
+        <span id="navUser" style="display:none;" class="ms-auto d-flex gap-3 align-items-center">
+          <a class="text-dark text-decoration-none" href="perfil.html"><span id="navUserName">Mi cuenta</span></a>
+          <button class="btn btn-sm btn-outline-dark" type="button" id="btnLogout">Cerrar sesión</button>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container my-4">
+    <nav class="small text-muted mb-3" aria-label="breadcrumb">
+      <span><a class="text-decoration-none" href="index.html">Inicio</a></span>
+      <span class="mx-1">/</span>
+      <span><a class="text-decoration-none" href="categorias.html">Categorías</a></span>
+      <span class="mx-1">/</span>
+      <span id="breadcrumbProducto">Producto</span>
+    </nav>
+
+    <div id="detalleProducto"></div>
+    <div class="mt-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 m-0">Quienes vieron este producto también compraron</h2>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-dark" type="button" id="btnSimPrev" aria-label="Anterior">‹</button>
+          <button class="btn btn-sm btn-outline-dark" type="button" id="btnSimNext" aria-label="Siguiente">›</button>
+        </div>
+      </div>
+      <div id="similares" class="ml-hscroll" aria-label="Carrusel de productos"></div>
+    </div>
+    <div class="mt-4">
+      <h2 class="h5 mb-3">Reseñas</h2>
+      <div id="resenas"></div>
+    </div>
+  </main>
+  <footer class="bg-dark text-white text-center py-3 mt-5">
+    <div class="container small">© 2025 Tienda Online — Todos los derechos reservados</div>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="detalle-producto.js"></script>
+</body>
+</html>

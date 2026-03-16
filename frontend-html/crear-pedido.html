@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crear Pedido Manual - Tienda Online</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .page-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem 0;
+      margin-bottom: 2rem;
+      border-radius: 0 0 1rem 1rem;
+    }
+    
+    .product-card {
+      border: 2px solid #e9ecef;
+      border-radius: 1rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .product-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    
+    .product-card.selected {
+      border-color: #667eea;
+      background-color: #f8f9ff;
+    }
+    
+    .quantity-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .quantity-control button {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid #dee2e6;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .quantity-control button:hover {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+    
+    .quantity-control input {
+      width: 60px;
+      text-align: center;
+      border: 1px solid #dee2e6;
+      border-radius: 0.5rem;
+    }
+    
+    .cart-item {
+      background: #f8f9fa;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      transition: all 0.3s ease;
+    }
+    
+    .cart-item:hover {
+      background: #e9ecef;
+    }
+    
+    .summary-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+    }
+    
+    .customer-search {
+      position: relative;
+    }
+    
+    .customer-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .customer-suggestions.show {
+      display: block;
+    }
+    
+    .customer-suggestion {
+      padding: 0.75rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    
+    .customer-suggestion:hover {
+      background: #f8f9fa;
+    }
+    
+    .customer-suggestion.selected {
+      background: #667eea;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h1 class="h2 mb-2">
+            <i class="fas fa-plus-circle me-3"></i>
+            Crear Pedido Manual
+          </h1>
+          <p class="mb-0 opacity-75">Registra un nuevo pedido para un cliente</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <a href="gestion-pedidos.html" class="btn btn-light">
+            <i class="fas fa-arrow-left me-2"></i>
+            Volver a Pedidos
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <form id="formCrearPedido">
+      <!-- Información del Cliente -->
+      <section class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-user me-2"></i>
+            Información del Cliente
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Buscar Cliente</label>
+              <div class="customer-search">
+                <input type="text" class="form-control" id="busquedaCliente" placeholder="Buscar por nombre, email o ID...">
+                <div class="customer-suggestions" id="sugerenciasCliente"></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Cliente Seleccionado</label>
+              <div class="form-control bg-light" id="clienteSeleccionado">
+                <span class="text-muted">No hay cliente seleccionado</span>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="idCliente" required>
+        </div>
+      </section>
+
+      <!-- Selección de Productos -->
+      <section class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-box me-2"></i>
+              Seleccionar Productos
+            </h5>
+            <div class="d-flex gap-2">
+              <input type="text" class="form-control" id="busquedaProducto" placeholder="Buscar productos..." style="width: 250px;">
+              <select class="form-select" id="filtroCategoria" style="width: 150px;">
+                <option value="">Todas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="productosGrid" class="row g-3">
+            <div class="col-12 text-center py-5">
+              <div class="loading-spinner"></div>
+              <div class="text-muted mt-2">Cargando productos...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Carrito del Pedido -->
+      <section class="row">
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-shopping-cart me-2"></i>
+                Productos del Pedido
+                <span class="badge bg-secondary ms-2" id="countItems">0</span>
+              </h5>
+            </div>
+            <div class="card-body">
+              <div id="carritoItems">
+                <div class="text-center py-5 text-muted">
+                  <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                  <p>No hay productos agregados al pedido</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="summary-card">
+            <h5 class="mb-4">
+              <i class="fas fa-calculator me-2"></i>
+              Resumen del Pedido
+            </h5>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span>Subtotal:</span>
+                <span id="subtotal">$0</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2">
+                <span>IVA (16%):</span>
+                <span id="iva">$0</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2">
+                <span>Envío:</span>
+                <span id="envio">$0</span>
+              </div>
+              <hr class="my-3" style="border-color: rgba(255,255,255,0.3)">
+              <div class="d-flex justify-content-between fw-bold fs-5">
+                <span>Total:</span>
+                <span id="total">$0</span>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label text-white">Método de Pago</label>
+              <select class="form-select" id="metodoPago" required>
+                <option value="">Seleccionar...</option>
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TARJETA">Tarjeta de Crédito/Débito</option>
+                <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                <option value="MERCADO_PAGO">Mercado Pago</option>
+                <option value="PAYPAL">PayPal</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label text-white">Notas (opcional)</label>
+              <textarea class="form-control" id="notasPedido" rows="3" placeholder="Notas adicionales del pedido..."></textarea>
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button type="button" class="btn btn-light" onclick="limpiarCarrito()">
+                <i class="fas fa-trash me-2"></i>Limpiar Carrito
+              </button>
+              <button type="submit" class="btn btn-success">
+                <i class="fas fa-check me-2"></i>Crear Pedido
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </form>
+  </main>
+
+  <!-- Modal Confirmación -->
+  <div class="modal fade" id="modalConfirmacion" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar Pedido</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="contenidoConfirmacion">
+          <!-- Contenido dinámico -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success" onclick="confirmarPedido()">Confirmar Creación</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="crear-pedido.js"></script>
+</body>
+</html>

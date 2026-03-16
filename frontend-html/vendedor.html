@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Vendedor - Tienda Online</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Estilos alineados con admin.html */
+    .admin-dark {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+    }
+
+    .ml-header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+    }
+
+    .ml-brand {
+      font-weight: 700;
+      color: #2c3e50 !important;
+      font-size: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .ml-brand:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Tabs — mismo púrpura que admin */
+    .nav-tabs .nav-link {
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-radius: 10px 10px 0 0;
+      margin-right: 5px;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .nav-tabs .nav-link:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .nav-tabs .nav-link.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Cards */
+    .card {
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      font-weight: 600;
+    }
+
+    /* Stat cards */
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100px;
+      height: 100px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      transform: translate(30px, -30px);
+    }
+
+    .stat-card .card-body {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Botones */
+    .btn {
+      border-radius: 10px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    /* Dropdown */
+    .dropdown-menu {
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Animación de entrada */
+    .fade-in {
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Tabla */
+    .table {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .table th {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      font-weight: 600;
+    }
+
+    .table td {
+      border: none;
+      color: rgba(255, 255, 255, 0.8);
+      vertical-align: middle;
+    }
+
+    /* Badges */
+    .badge {
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-weight: 500;
+    }
+
+    /* Modal */
+    .modal-content {
+      border: none;
+      border-radius: 15px;
+      background: rgba(26, 26, 46, 0.95);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 15px 15px 0 0;
+    }
+
+    /* Formularios */
+    .form-control, .form-select {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #667eea;
+      color: white;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .form-control::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .form-text {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Spinner */
+    .spinner-border {
+      color: #667eea;
+    }
+
+    /* Alertas */
+    .alert {
+      border: none;
+      border-radius: 10px;
+    }
+
+    /* Componentes adicionales del admin */
+    .search-box {
+      position: relative;
+      max-width: 400px;
+    }
+
+    .search-box input {
+      padding-left: 40px;
+    }
+
+    .ml-header .form-control {
+      background: white;
+      color: #333;
+      border: 1px solid #dee2e6;
+    }
+
+    .ml-header .form-control:focus {
+      background: white;
+      color: #333;
+      border-color: #667eea;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .search-box::before {
+      content: '\f002';
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #6c757d;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: white;
+      font-size: 14px;
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #e74c3c;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .quick-action-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .quick-action-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+
+    .activity-item {
+      border-left: 3px solid #667eea;
+      padding-left: 15px;
+      margin-bottom: 15px;
+      position: relative;
+    }
+
+    .activity-item::before {
+      content: '';
+      position: absolute;
+      left: -8px;
+      top: 5px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #667eea;
+    }
+
+    .progress-ring {
+      width: 60px;
+      height: 60px;
+    }
+
+    .progress-ring circle {
+      stroke: #667eea;
+      stroke-width: 4;
+      fill: transparent;
+      stroke-dasharray: 157;
+      stroke-dashoffset: 157;
+      animation: progress 2s ease-out forwards;
+    }
+
+    @keyframes progress {
+      to {
+        stroke-dashoffset: 50;
+      }
+    }
+  </style>
+</head>
+<body class="admin-dark">
+  <!-- Header Mejorado -->
+  <header class="ml-header sticky-top">
+    <div class="container py-3">
+      <div class="d-flex gap-3 align-items-center">
+        <a class="ml-brand" href="index.html">
+          <i class="fas fa-store me-2"></i>Tienda Online
+        </a>
+        
+        <!-- Barra de búsqueda mejorada -->
+        <div class="search-box flex-grow-1">
+          <input class="form-control" type="search" id="buscadorGlobal" placeholder="Buscar productos, pedidos..." aria-label="Buscar">
+        </div>
+        
+        <!-- Carrito con notificaciones -->
+        <a class="btn btn-outline-dark position-relative" href="carrito.html" aria-label="Carrito">
+          <i class="fas fa-shopping-cart"></i>
+          <span class="notification-badge" id="cartCount" style="display:none;">0</span>
+        </a>
+      </div>
+      
+      <!-- Navegación mejorada -->
+      <nav class="navbar navbar-expand-lg navbar-light bg-white mt-3 rounded-3 p-0">
+        <div class="container-fluid p-0">
+          <ul class="navbar-nav me-auto flex-row">
+            <!-- Tienda -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle text-dark fw-semibold" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-store me-1"></i> Tienda
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="index.html"><i class="fas fa-home me-2"></i>Inicio</a></li>
+                <li><a class="dropdown-item" href="categorias.html"><i class="fas fa-tags me-2"></i>Categorías</a></li>
+                <li><a class="dropdown-item" href="mis-pedidos.html"><i class="fas fa-list me-2"></i>Mis Pedidos</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="carrito.html"><i class="fas fa-shopping-cart me-2"></i>Carrito</a></li>
+              </ul>
+            </li>
+            
+            <!-- Panel Vendedor -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle text-primary fw-bold" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-store me-1"></i> Panel Vendedor
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header"><i class="fas fa-chart-line me-1"></i> Gestión Principal</h6></li>
+                <li><a class="dropdown-item active" href="vendedor.html"><i class="fas fa-tachometer-alt me-2"></i>Panel Vendedor</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.querySelector('[data-bs-target=\'#dashboard\']').click()"><i class="fas fa-chart-bar me-2"></i>Dashboard</a></li>
+                <li><hr class="dropdown-divider"></li>
+                
+                <li><h6 class="dropdown-header"><i class="fas fa-box me-1"></i> Mi Catálogo</h6></li>
+                <li><a class="dropdown-item" href="#" onclick="document.querySelector('[data-bs-target=\'#productos\']').click()"><i class="fas fa-box me-2"></i>Mis Productos</a></li>
+                <li><hr class="dropdown-divider"></li>
+                
+                <li><h6 class="dropdown-header"><i class="fas fa-shopping-bag me-1"></i> Ventas</h6></li>
+                <li><a class="dropdown-item" href="#" onclick="document.querySelector('[data-bs-target=\'#pedidos\']').click()"><i class="fas fa-clipboard-list me-2"></i>Mis Pedidos</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.querySelector('[data-bs-target=\'#estadisticas\']').click()"><i class="fas fa-chart-line me-2"></i>Estadísticas</a></li>
+                <li><hr class="dropdown-divider"></li>
+                
+                <li><h6 class="dropdown-header"><i class="fas fa-user me-1"></i> Mi Cuenta</h6></li>
+                <li><a class="dropdown-item" href="#" onclick="document.querySelector('[data-bs-target=\'#perfil\']').click()"><i class="fas fa-user-edit me-2"></i>Mi Perfil</a></li>
+              </ul>
+            </li>
+          </ul>
+          
+          <!-- Usuario mejorado -->
+          <ul class="navbar-nav ms-auto flex-row">
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle text-dark d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
+                <div class="user-avatar" id="userAvatar">V</div>
+                <span id="vendedorName">Vendedor</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header"><i class="fas fa-user me-1"></i> Cuenta</h6></li>
+                <li><a class="dropdown-item" href="#" onclick="document.querySelector('[data-bs-target=\'#perfil\']').click()"><i class="fas fa-user-edit me-2"></i>Mi Perfil</a></li>
+                <li><a class="dropdown-item" href="#" onclick="showFeatureToast('Próximamente: Configuración de cuenta'); return false;"><i class="fas fa-cog me-2"></i>Configuración</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Mejorado -->
+  <main class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+      <div>
+        <h1 class="h2 mb-1">
+          <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+          Panel de Vendedor
+        </h1>
+        <p class="text-muted mb-0">Gestiona todos los aspectos de tu tienda online</p>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <span class="badge bg-success px-3 py-2">
+          <i class="fas fa-shield-alt me-1"></i>VENDEDOR
+        </span>
+
+        <div class="text-muted small" id="vendedorStats">
+          <i class="fas fa-clock me-1"></i>
+          <span id="currentTime"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="vendedorTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab">
+          <i class="fas fa-chart-bar me-2"></i>Dashboard
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="productos-tab" data-bs-toggle="tab" data-bs-target="#productos" type="button" role="tab">
+          <i class="fas fa-box me-2"></i>Mis Productos
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pedidos-tab" data-bs-toggle="tab" data-bs-target="#pedidos" type="button" role="tab">
+          <i class="fas fa-shopping-cart me-2"></i>Mis Pedidos
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="estadisticas-tab" data-bs-toggle="tab" data-bs-target="#estadisticas" type="button" role="tab">
+          <i class="fas fa-chart-line me-2"></i>Estadísticas
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="perfil-tab" data-bs-toggle="tab" data-bs-target="#perfil" type="button" role="tab">
+          <i class="fas fa-user me-2"></i>Mi Perfil
+        </button>
+      </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="vendedorTabContent">
+
+      <!-- Dashboard Tab -->
+      <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+        <div class="row g-4 mb-4">
+          <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="card-title mb-1"><i class="fas fa-dollar-sign me-2"></i>Ventas del mes</h6>
+                    <h3 class="mb-0" id="ventasMes">0</h3>
+                    <small class="opacity-75">Total de ingresos</small>
+                  </div>
+                  <i class="fas fa-chart-line fa-2x opacity-50"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card bg-success text-white">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="card-title mb-1"><i class="fas fa-shopping-cart me-2"></i>Pedidos activos</h6>
+                    <h3 class="mb-0" id="pedidosActivos">0</h3>
+                    <small class="opacity-75">En proceso</small>
+                  </div>
+                  <i class="fas fa-clipboard-list fa-2x opacity-50"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="card-title mb-1"><i class="fas fa-dollar-sign me-2"></i>Ingresos</h6>
+                    <h3 class="mb-0" id="ingresosMes">$0</h3>
+                    <small class="opacity-75">Este mes</small>
+                  </div>
+                  <i class="fas fa-coins fa-2x opacity-50"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card bg-info text-white">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="card-title mb-1"><i class="fas fa-box me-2"></i>Mis Productos</h6>
+                    <h3 class="mb-0" id="totalProductos">0</h3>
+                    <small class="opacity-75">En catálogo</small>
+                  </div>
+                  <i class="fas fa-boxes fa-2x opacity-50"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones rápidas dentro del Dashboard -->
+        <div class="row g-3 mb-4">
+          <div class="col-lg-3 col-md-6">
+            <div class="quick-action-card" onclick="document.getElementById('productos-tab').click()">
+              <i class="fas fa-box fa-2x mb-2"></i>
+              <div class="fw-bold">Mis Productos</div>
+              <small>Gestionar catálogo</small>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6">
+            <div class="quick-action-card" onclick="document.getElementById('pedidos-tab').click()">
+              <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+              <div class="fw-bold">Mis Pedidos</div>
+              <small>Ver pedidos</small>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6">
+            <div class="quick-action-card" onclick="document.getElementById('estadisticas-tab').click()">
+              <i class="fas fa-chart-line fa-2x mb-2"></i>
+              <div class="fw-bold">Estadísticas</div>
+              <small>Ver análisis</small>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6">
+            <div class="quick-action-card" onclick="document.getElementById('perfil-tab').click()">
+              <i class="fas fa-user fa-2x mb-2"></i>
+              <div class="fw-bold">Mi Perfil</div>
+              <small>Editar cuenta</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-history me-2"></i>Actividad Reciente</h6>
+          </div>
+          <div class="card-body">
+            <div id="actividadReciente" class="small text-muted">
+              <div class="text-center py-3">
+                <i class="fas fa-spinner fa-spin me-2"></i>Cargando actividad...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Productos Tab -->
+      <div class="tab-pane fade" id="productos" role="tabpanel">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-box me-2"></i>Mis Productos
+            </h5>
+            <div>
+              <button class="btn btn-light btn-sm me-2" onclick="recargarProductos()">
+                <i class="fas fa-sync-alt me-1"></i>Actualizar
+              </button>
+              <button class="btn btn-light btn-sm" onclick="abrirCrearProducto()">
+                <i class="fas fa-plus me-1"></i>Nuevo Producto
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="input-group">
+                  <span class="input-group-text bg-white bg-opacity-10 border-0 text-white">
+                    <i class="fas fa-search"></i>
+                  </span>
+                  <input type="text" class="form-control" id="buscadorProducto" placeholder="Buscar productos...">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" id="filtroEstado">
+                  <option value="">Todos los estados</option>
+                  <option value="activo">Activos</option>
+                  <option value="sin-stock">Sin stock</option>
+                  <option value="bajo-stock">Stock bajo</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" id="filtroCategoria">
+                  <option value="">Todas las categorías</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Imagen</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="productosTableBody">
+                  <tr>
+                    <td colspan="7" class="text-center py-4">
+                      <div class="text-muted">
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        Cargando productos...
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pedidos Tab -->
+      <div class="tab-pane fade" id="pedidos" role="tabpanel">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-shopping-cart me-2"></i>Mis Pedidos
+            </h5>
+            <button class="btn btn-light btn-sm" onclick="recargarPedidos()">
+              <i class="fas fa-sync-alt me-1"></i>Actualizar
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <div class="input-group">
+                  <span class="input-group-text bg-white bg-opacity-10 border-0 text-white">
+                    <i class="fas fa-search"></i>
+                  </span>
+                  <input type="text" class="form-control" id="busquedaPedido" placeholder="Buscar pedidos...">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" id="filtroEstadoPedido">
+                  <option value="">Todos los estados</option>
+                  <option value="pendiente">Pendiente</option>
+                  <option value="procesando">Procesando</option>
+                  <option value="enviado">Enviado</option>
+                  <option value="completado">Completado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <input type="date" class="form-control" id="filtroFecha">
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>ID Pedido</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="pedidosTableBody">
+                  <tr>
+                    <td colspan="6" class="text-center">
+                      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                      Cargando pedidos...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estadísticas Tab -->
+      <div class="tab-pane fade" id="estadisticas" role="tabpanel">
+        <div class="row">
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0">
+                  <i class="fas fa-chart-line me-2"></i>Ventas Mensuales
+                </h6>
+              </div>
+              <div class="card-body">
+                <canvas id="ventasChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0">
+                  <i class="fas fa-chart-pie me-2"></i>Estado de Productos
+                </h6>
+              </div>
+              <div class="card-body">
+                <canvas id="productosChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0">
+                  <i class="fas fa-trophy me-2"></i>Productos Más Vendidos
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th>Unidades Vendidas</th>
+                        <th>Ingresos</th>
+                        <th>Tendencia</th>
+                      </tr>
+                    </thead>
+                    <tbody id="topProductosBody">
+                      <tr>
+                        <td colspan="4" class="text-center">Cargando estadísticas...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Perfil Tab -->
+      <div class="tab-pane fade" id="perfil" role="tabpanel">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">
+                  <i class="fas fa-user me-2"></i>Información del Vendedor
+                </h5>
+              </div>
+              <div class="card-body">
+                <form id="perfilForm">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Nombre</label>
+                      <input type="text" class="form-control" id="perfilNombre" readonly>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Email</label>
+                      <input type="email" class="form-control" id="perfilEmail" readonly>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Rol</label>
+                      <input type="text" class="form-control" id="perfilRol" value="VENDEDOR" readonly>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label">Fecha de Registro</label>
+                      <input type="text" class="form-control" id="perfilFechaRegistro" readonly>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Descripción de la Tienda</label>
+                    <textarea class="form-control" id="perfilDescripcion" rows="3" placeholder="Describe tu tienda..."></textarea>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-light" onclick="cambiarPassword()">
+                      <i class="fas fa-key me-1"></i>Cambiar Contraseña
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-save me-1"></i>Guardar Cambios
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0">
+                  <i class="fas fa-info-circle me-2"></i>Información de Vendedor
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="alert alert-info">
+                  <h6><i class="fas fa-store me-2"></i>Panel de Vendedor</h6>
+                  <p class="mb-2">Como vendedor, puedes:</p>
+                  <ul class="mb-0">
+                    <li>Gestionar tus productos</li>
+                    <li>Ver tus pedidos y ventas</li>
+                    <li>Analizar tus estadísticas</li>
+                    <li>Actualizar tu perfil</li>
+                  </ul>
+                </div>
+                <div class="d-grid gap-2">
+                  <button class="btn btn-outline-light btn-sm" onclick="exportarDatos()">
+                    <i class="fas fa-download me-1"></i>Exportar Datos
+                  </button>
+                  <button class="btn btn-outline-light btn-sm" onclick="verAyuda()">
+                    <i class="fas fa-question-circle me-1"></i>Ayuda
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Crear/Editar Producto -->
+  <div class="modal fade" id="modalProducto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalProductoTitle">
+            <i class="fas fa-box me-2"></i>Crear Producto
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="productoForm">
+            <div class="row">
+              <div class="col-md-8 mb-3">
+                <label class="form-label">Nombre del producto</label>
+                <input type="text" class="form-control" id="productoNombre" required>
+                <div class="invalid-feedback">Este campo es obligatorio</div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Imagen</label>
+                <input type="url" class="form-control" id="productoImagen" placeholder="https://...">
+                <div class="form-text">Pega una URL o deja vacío para usar imagen por defecto</div>
+                <img id="previewImagen" class="mt-2 rounded" width="120" style="display:none;">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Precio</label>
+                <input type="number" class="form-control" id="productoPrecio" step="0.01" min="0" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Stock</label>
+                <input type="number" class="form-control" id="productoStock" min="0" required>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Categoría</label>
+                <select class="form-select" id="productoCategoria" required>
+                  <option value="">Selecciona una categoría</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Descripción</label>
+                <textarea class="form-control" id="productoDescripcion" rows="3" maxlength="500"></textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-8 mb-3">
+                <label class="form-label"><i class="fas fa-map-marker-alt me-1 text-danger"></i>Ciudad de origen del producto</label>
+                <input type="text" class="form-control" id="productoCiudadOrigen" placeholder="Ej: Bogotá, Medellín, Cali...">
+                <div class="form-text">Indica desde qué ciudad se envía el producto. Se usa para calcular tiempos de entrega.</div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label"><i class="fas fa-clock me-1 text-warning"></i>Días de preparación</label>
+                <input type="number" class="form-control" id="productoTiempoPreparacion" min="0" max="30" value="1" placeholder="1">
+                <div class="form-text">Días para alistar antes de enviar.</div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="guardarProducto()">
+            <i class="fas fa-save me-1"></i>Guardar Producto
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ver Pedido -->
+  <div class="modal fade" id="modalPedido" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-shopping-cart me-2"></i>Detalles del Pedido
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="pedidoDetalles"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-dark text-center py-4 mt-5">
+    <div class="container">
+      <p class="mb-0 text-muted">
+        &copy; 2025 Tienda Online — Panel de Vendedor
+      </p>
+      <small class="text-muted">
+        Desarrollado con <i class="fas fa-heart text-danger"></i> para vendedores
+      </small>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="ui-kit.js"></script>
+  <script src="vendedor.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categorías - Tienda Online</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="admin-dark">
+  <header class="ml-header">
+    <div class="container py-2">
+      <div class="d-flex gap-3 align-items-center">
+        <a class="ml-brand" href="index.html">Tienda Online</a>
+        <form class="flex-grow-1" role="search" onsubmit="return false;">
+          <input class="form-control" type="search" placeholder="Buscar productos, marcas y más..." aria-label="Buscar">
+        </form>
+        <a class="btn btn-outline-dark position-relative" href="carrito.html" aria-label="Carrito">
+          Carrito
+          <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
+        </a>
+      </div>
+      <div class="d-flex gap-3 mt-2 small align-items-center flex-wrap">
+        <a class="text-dark text-decoration-none" href="categorias.html">Categorías</a>
+        <a id="navProductos" class="text-dark text-decoration-none" href="producto.html">Productos</a>
+        <a id="navMisPedidos" class="text-dark text-decoration-none" href="mis-pedidos.html">Mis pedidos</a>
+        <span id="navAdmin" style="display:none;"><a class="text-dark text-decoration-none" href="admin.html">Administración</a></span>
+        <span id="navGuest"><a class="text-dark text-decoration-none" href="login.html">Iniciar sesión</a> <a class="text-dark text-decoration-none" href="registro.html">Registrarse</a></span>
+        <span id="navUser" style="display:none;" class="ms-auto d-flex gap-3 align-items-center">
+          <a class="text-dark text-decoration-none" href="perfil.html"><span id="navUserName">Mi cuenta</span></a>
+          <button class="btn btn-sm btn-outline-dark" type="button" id="btnLogout">Cerrar sesión</button>
+        </span>
+      </div>
+    </div>
+  </header>
+  
+  <nav class="bg-light border-bottom">
+    <div class="container py-2">
+      <div class="d-flex align-items-center gap-3">
+        <a href="index.html" class="text-decoration-none text-muted">← Inicio</a>
+        <span class="text-muted">/</span>
+        <span class="text-dark fw-semibold">Categorías</span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container my-4">
+    <div class="row">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 class="h2 mb-1">Categorías</h1>
+            <p class="text-muted mb-0">Explora nuestras categorías de productos</p>
+          </div>
+          <button class="btn btn-success" id="btnNuevaCategoria" style="display:none;" onclick="mostrarFormCategoria()">
+            + Nueva Categoría
+          </button>
+        </div>
+        
+        <div id="categorias" class="row g-3"></div>
+
+        <div id="productosCategoria" class="mt-4" style="display:none;">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 mb-0" id="tituloProductosCat">Productos</h2>
+            <button class="btn btn-sm btn-outline-dark" id="btnVolverCats" onclick="volverACategorias()">← Volver</button>
+          </div>
+          <div id="gridProductosCat" class="row g-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalCategoria" tabindex="-1" aria-labelledby="modalCategoriaLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form id="formCategoria">
+            <div class="modal-header">
+              <h5 class="modal-title" id="modalCategoriaLabel">Nueva Categoría</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                <input type="text" class="form-control" id="catNombre" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Descripción</label>
+                <textarea class="form-control" id="catDescripcion" rows="3"></textarea>
+              </div>
+              <div id="catMsg" class="mt-2"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <footer class="bg-dark text-white text-center py-3 mt-5">
+    <div class="container small">© 2025 Tienda Online — Todos los derechos reservados</div>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="categorias.js"></script>
+</body>
+</html>

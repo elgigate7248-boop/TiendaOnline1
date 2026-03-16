@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Productos - Tienda Online</title>
+  <script>
+    (function protegerProductos() {
+      try {
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        const rolesRaw = Array.isArray(user.roles)
+          ? user.roles
+          : (user.rol ? [user.rol] : []);
+
+        const roles = rolesRaw
+          .map(r => (r && typeof r === 'object') ? r.nombre : r)
+          .map(r => String(r || '').trim().toUpperCase())
+          .filter(Boolean);
+
+        const permitido =
+          roles.includes('ADMIN') ||
+          roles.includes('VENDEDOR') ||
+          roles.includes('SUPER_ADMIN');
+
+        if (!token) {
+          location.replace('login.html');
+          return;
+        }
+
+        if (!permitido) {
+          location.replace('index.html');
+        }
+
+      } catch (error) {
+        location.replace('login.html');
+      }
+    })();
+
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="admin-dark">
+  <header class="ml-header">
+    <div class="container py-2">
+      <div class="d-flex gap-3 align-items-center">
+        <a class="ml-brand" href="index.html">Tienda Online</a>
+        <form class="flex-grow-1" role="search" onsubmit="return false;">
+          <input class="form-control" type="search" placeholder="Buscar productos, marcas y más..." aria-label="Buscar">
+        </form>
+        <a class="btn btn-outline-dark position-relative" href="carrito.html" aria-label="Carrito">
+          Carrito
+          <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
+        </a>
+      </div>
+      <div class="d-flex gap-3 mt-2 small align-items-center flex-wrap">
+        <a class="text-dark text-decoration-none" href="categorias.html">Categorías</a>
+        <a class="text-dark text-decoration-none" href="producto.html">Productos</a>
+        <a class="text-dark text-decoration-none" href="mis-pedidos.html">Mis pedidos</a>
+        <span id="navAdmin" style="display:none;"><a class="text-dark text-decoration-none" href="admin.html">Administración</a></span>
+        <span id="navGuest"><a class="text-dark text-decoration-none" href="login.html">Iniciar sesión</a> <a class="text-dark text-decoration-none" href="registro.html">Registrarse</a></span>
+        <span id="navUser" style="display:none;" class="ms-auto d-flex gap-3 align-items-center">
+          <a class="text-dark text-decoration-none" href="perfil.html"><span id="navUserName">Mi cuenta</span></a>
+          <button class="btn btn-sm btn-outline-dark" type="button" id="btnLogout">Cerrar sesión</button>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container my-4">
+    <nav class="small text-muted mb-3" aria-label="breadcrumb">
+      <a class="text-decoration-none" href="index.html">Inicio</a>
+      <span class="mx-1">/</span>
+      <span>Productos</span>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="h3 mb-1">Gestión de Productos</h1>
+        <p class="text-muted mb-0 small">Agrega, edita o elimina productos de tu catálogo</p>
+      </div>
+      <button class="btn btn-success" id="btnNuevoProducto">+ Nuevo Producto</button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label small fw-semibold mb-1">Buscar producto</label>
+            <input type="text" class="form-control form-control-sm" id="filtroBuscar" placeholder="Nombre del producto...">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Categoría</label>
+            <select class="form-select form-select-sm" id="filtroCategoria">
+              <option value="">Todas las categorías</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Stock</label>
+            <select class="form-select form-select-sm" id="filtroStock">
+              <option value="">Todos</option>
+              <option value="disponible">Con stock</option>
+              <option value="agotado">Agotados</option>
+              <option value="bajo">Stock bajo (&le;10)</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-sm btn-outline-dark w-100" id="btnLimpiarFiltros">Limpiar filtros</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de productos -->
+    <div id="productosList">
+      <div class="text-muted text-center py-5">Cargando productos...</div>
+    </div>
+  </main>
+
+  <!-- Modal Producto (Crear / Editar) -->
+  <div class="modal fade" id="modalProducto" tabindex="-1" aria-labelledby="modalProductoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="formProducto">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalProductoLabel">Nuevo Producto</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="prodId">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nombre del producto *</label>
+              <input type="text" class="form-control" id="prodNombre" placeholder="Ej: Laptop HP Pavilion 15" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea class="form-control" id="prodDescripcion" rows="5" placeholder="Describe el producto: características principales, materiales, dimensiones, etc."></textarea>
+              <div class="form-text">Una buena descripción ayuda a los clientes a decidir su compra.</div>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Precio ($) *</label>
+                <input type="number" class="form-control" id="prodPrecio" step="0.01" min="0" placeholder="0.00" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Stock *</label>
+                <input type="number" class="form-control" id="prodStock" min="0" placeholder="0" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Categoría *</label>
+                <select class="form-select" id="prodCategoria" required></select>
+              </div>
+            </div>
+            <div class="row g-3 mt-1">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Departamento de origen</label>
+                <select class="form-select" id="prodDeptoOrigen">
+                  <option value="">Seleccionar...</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Ciudad de origen</label>
+                <select class="form-select" id="prodCiudadOrigen" disabled>
+                  <option value="">Seleccionar...</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-3 mt-3">
+              <label class="form-label fw-semibold">Imagen (URL)</label>
+              <input type="url" class="form-control" id="prodImagen" placeholder="https://ejemplo.com/imagen.jpg">
+              <div class="form-text">Puedes pegar URL o subir imagen por arrastrar/soltar.</div>
+              <input type="file" class="form-control mt-2" id="prodImagenArchivo" accept="image/*">
+              <div id="prodDropZoneCrud" class="dropzone-producto mt-2" role="button" tabindex="0" aria-label="Zona para arrastrar imagen">
+                Arrastra y suelta una imagen aquí o haz clic para seleccionarla
+              </div>
+              <div id="prodImagenPreview" class="mt-2"></div>
+            </div>
+            <div id="prodMsg" class="mt-2"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btnGuardarProducto">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmar Eliminar -->
+  <div class="modal fade" id="modalEliminar" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h6 class="modal-title">Eliminar producto</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">¿Estás seguro de que deseas eliminar <strong id="eliminarNombre"></strong>? Esta acción no se puede deshacer.</p>
+          <div id="eliminarMsg" class="mt-2"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-danger" id="btnConfirmarEliminar">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-dark text-white text-center py-3 mt-5">
+    <div class="container small">&copy; 2025 Tienda Online — Todos los derechos reservados</div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="ui-kit.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="producto-crud.js"></script>
+</body>
+</html>

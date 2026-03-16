@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Perfil - Tienda Online</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="ml-header">
+    <div class="container py-2">
+      <div class="d-flex gap-3 align-items-center">
+        <a class="ml-brand" href="index.html">Tienda Online</a>
+        <form class="flex-grow-1" role="search" onsubmit="return false;">
+          <input class="form-control" type="search" placeholder="Buscar productos, marcas y más..." aria-label="Buscar">
+        </form>
+        <a class="btn btn-outline-dark position-relative" href="carrito.html" aria-label="Carrito">
+          Carrito
+          <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
+        </a>
+      </div>
+
+      <div class="d-flex gap-3 mt-2 small align-items-center flex-wrap">
+        <a class="text-dark text-decoration-none" href="categorias.html">Categorías</a>
+        <a class="text-dark text-decoration-none" href="producto.html">Productos</a>
+        <a class="text-dark text-decoration-none" href="mis-pedidos.html">Mis pedidos</a>
+        <span id="navAdmin" style="display:none;"><a class="text-dark text-decoration-none" href="admin.html">Administración</a></span>
+        <span id="navGuest"><a class="text-dark text-decoration-none" href="login.html">Iniciar sesión</a> <a class="text-dark text-decoration-none" href="registro.html">Registrarse</a></span>
+        <span id="navUser" style="display:none;" class="ms-auto d-flex gap-3 align-items-center">
+          <a class="text-dark text-decoration-none" href="perfil.html"><span id="navUserName">Mi cuenta</span></a>
+          <button class="btn btn-sm btn-outline-dark" type="button" id="btnLogout">Cerrar sesión</button>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container my-4">
+    <nav class="small text-muted mb-3" aria-label="breadcrumb">
+      <a class="text-decoration-none" href="index.html">Inicio</a>
+      <span class="mx-1">/</span>
+      <span>Mi Perfil</span>
+    </nav>
+
+    <div class="row g-4">
+      <!-- Sidebar -->
+      <div class="col-md-4">
+        <div class="card shadow-sm text-center p-4">
+          <div class="mx-auto mb-3" style="width:80px;height:80px;border-radius:50%;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:#333;" id="avatarInicial">?</div>
+          <div id="datosUsuario">
+            <div class="text-muted small">Cargando datos...</div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+          <div class="card-body">
+            <h6 class="card-title fw-bold mb-2">Acciones rápidas</h6>
+            <div class="d-grid gap-2">
+              <a href="mis-pedidos.html" class="btn btn-outline-dark btn-sm">📦 Mis pedidos</a>
+              <a href="carrito.html" class="btn btn-outline-dark btn-sm">🛒 Mi carrito</a>
+              <a href="index.html" class="btn btn-outline-dark btn-sm">🏠 Ir al catálogo</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">Mis intereses</h5>
+            <p class="text-muted small mb-3">Selecciona las categorías que te interesan para recibir recomendaciones personalizadas.</p>
+            <div id="categoriasIntereses" class="row g-2 mb-3"></div>
+            <button class="btn btn-primary btn-sm" type="button" id="btnGuardarIntereses">Guardar preferencias</button>
+            <div id="msgIntereses" class="mt-2"></div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">Convertirme en vendedor</h5>
+            <p class="text-muted small mb-2">Aplica para vender tus productos en nuestra plataforma.</p>
+            <div id="vendedorSolicitudEstado" class="mb-3"></div>
+            <button class="btn btn-outline-dark" type="button" id="btnAbrirSolicitudVendedor">Solicitar cuenta de vendedor</button>
+            <div id="vendedorSolicitudMsg" class="mt-2"></div>
+          </div>
+        </div>
+
+        <!-- Solicitud Repartidor -->
+        <div class="card shadow-sm mt-3">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">🚚 Convertirme en repartidor</h5>
+            <p class="text-muted small mb-2">¿Quieres entregar pedidos? Solicita unirte como repartidor.</p>
+            <div id="repartidorSolicitudEstado" class="mb-3"></div>
+            <button class="btn btn-outline-primary" type="button" id="btnAbrirSolicitudRepartidor">Solicitar ser repartidor</button>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">Recomendados para ti</h5>
+            <div id="recomendados" class="row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Solicitud Repartidor -->
+  <div class="modal fade" id="modalSolicitudRepartidor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="formSolicitudRepartidor">
+          <div class="modal-header">
+            <h5 class="modal-title">🚚 Solicitud de repartidor</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted small mb-3">Completa la información para solicitar el rol de repartidor. Un administrador revisará tu solicitud.</p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Teléfono de contacto</label>
+                <input class="form-control" id="rsrTelefono" placeholder="300 123 4567" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Ciudad de operación</label>
+                <input class="form-control" id="rsrCiudad" placeholder="Bogotá, Medellín..." required />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Tipo de vehículo</label>
+                <select class="form-select" id="rsrVehiculo" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="Moto">Moto</option>
+                  <option value="Bicicleta">Bicicleta</option>
+                  <option value="Carro">Carro</option>
+                  <option value="A pie">A pie</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Descripción (opcional)</label>
+                <textarea class="form-control" id="rsrDescripcion" rows="2" placeholder="Ej: disponibilidad, zonas que cubres..."></textarea>
+              </div>
+            </div>
+            <div id="rsrMsg" class="mt-3"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Enviar solicitud</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalSolicitudVendedor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="formSolicitudVendedor">
+          <div class="modal-header">
+            <h5 class="modal-title">Solicitud de vendedor</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nombre de la tienda</label>
+                <input class="form-control" id="vsNombreTienda" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Teléfono</label>
+                <input class="form-control" id="vsTelefono" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Ciudad</label>
+                <input class="form-control" id="vsCiudad" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">NIT / RUT</label>
+                <input class="form-control" id="vsNitRut" required />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Dirección fiscal</label>
+                <input class="form-control" id="vsDireccionFiscal" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Nombre legal</label>
+                <input class="form-control" id="vsNombreLegal" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Documento representante</label>
+                <input class="form-control" id="vsDocRepresentante" required />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Descripción (opcional)</label>
+                <textarea class="form-control" id="vsDescripcion" rows="3"></textarea>
+              </div>
+            </div>
+            <div id="vsMsg" class="mt-3"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Enviar solicitud</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-dark text-white text-center py-3 mt-5">
+    <div class="container small">© 2025 Tienda Online — Todos los derechos reservados</div>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="perfil.js"></script>
+</body>
+</html>

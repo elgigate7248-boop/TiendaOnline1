@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout con Stripe - Tienda Online</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    .page-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem 0;
+      margin-bottom: 2rem;
+      border-radius: 0 0 1rem 1rem;
+    }
+    
+    .checkout-step {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    
+    .step-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #e9ecef;
+      color: #6c757d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .step-number.active {
+      background: #667eea;
+      color: white;
+    }
+    
+    .step-number.completed {
+      background: #28a745;
+      color: white;
+    }
+    
+    .payment-method-card {
+      border: 2px solid #e9ecef;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .payment-method-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    
+    .payment-method-card.selected {
+      border-color: #667eea;
+      background-color: #f8f9ff;
+    }
+    
+    .stripe-element {
+      border: 1px solid #e9ecef;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      background: white;
+      transition: border-color 0.3s ease;
+    }
+    
+    .stripe-element:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .order-summary {
+      background: #f8f9fa;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      position: sticky;
+      top: 1rem;
+    }
+    
+    .processing-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    
+    .processing-content {
+      background: white;
+      border-radius: 1rem;
+      padding: 2rem;
+      text-align: center;
+      max-width: 400px;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .success-animation {
+      font-size: 4rem;
+      color: #28a745;
+      animation: successPulse 0.6s ease;
+    }
+    
+    @keyframes successPulse {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h1 class="h2 mb-2">
+            <i class="fas fa-credit-card me-3"></i>
+            Checkout Seguro
+          </h1>
+          <p class="mb-0 opacity-75">Procesa tu pago de forma segura con Stripe</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <div class="d-flex align-items-center justify-content-md-end gap-2">
+            <i class="fas fa-lock"></i>
+            <span>Pago seguro encriptado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Progress Steps -->
+  <main class="container">
+    <div class="checkout-step">
+      <div class="step-number completed">1</div>
+      <div class="flex-grow-1">
+        <div class="fw-bold">Carrito</div>
+        <div class="text-muted small">Productos seleccionados</div>
+      </div>
+    </div>
+    
+    <div class="checkout-step">
+      <div class="step-number completed">2</div>
+      <div class="flex-grow-1">
+        <div class="fw-bold">Información de Envío</div>
+        <div class="text-muted small">Dirección de entrega</div>
+      </div>
+    </div>
+    
+    <div class="checkout-step">
+      <div class="step-number active">3</div>
+      <div class="flex-grow-1">
+        <div class="fw-bold">Pago</div>
+        <div class="text-muted small">Método de pago y confirmación</div>
+      </div>
+    </div>
+
+    <form id="payment-form">
+      <div class="row">
+        <!-- Payment Form -->
+        <div class="col-md-8">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-credit-card me-2"></i>
+                Información de Pago
+              </h5>
+            </div>
+            <div class="card-body">
+              <!-- Payment Methods -->
+              <div class="mb-4">
+                <label class="form-label fw-bold">Selecciona un método de pago</label>
+                
+                <div class="payment-method-card selected" data-method="card">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-credit-card fa-2x text-primary me-3"></i>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1">Tarjeta de Crédito/Débito</h6>
+                      <small class="text-muted">Visa, Mastercard, American Express</small>
+                    </div>
+                    <i class="fas fa-check-circle text-success"></i>
+                  </div>
+                </div>
+                
+                <div class="payment-method-card" data-method="paypal">
+                  <div class="d-flex align-items-center">
+                    <i class="fab fa-paypal fa-2x text-blue me-3"></i>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1">PayPal</h6>
+                      <small class="text-muted">Paga con tu cuenta PayPal</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="payment-method-card" data-method="transfer">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-university fa-2x text-info me-3"></i>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1">Transferencia Bancaria</h6>
+                      <small class="text-muted">Transferencia directa o SPEI</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card Payment Form -->
+              <div id="card-payment-form">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Nombre del titular</label>
+                    <input type="text" class="form-control" id="card-name" placeholder="Juan Pérez" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="card-email" placeholder="juan@ejemplo.com" required>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Información de la tarjeta</label>
+                    <div id="card-element" class="stripe-element">
+                      <!-- Stripe Elements se insertará aquí -->
+                    </div>
+                    <div id="card-errors" class="text-danger small mt-1" role="alert"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PayPal Form (Hidden by default) -->
+              <div id="paypal-payment-form" style="display: none;">
+                <div class="text-center py-4">
+                  <i class="fab fa-paypal fa-4x text-blue mb-3"></i>
+                  <h6>Serás redirigido a PayPal</h6>
+                  <p class="text-muted">Podrás pagar con tu cuenta PayPal o tarjeta</p>
+                </div>
+              </div>
+
+              <!-- Transfer Form (Hidden by default) -->
+              <div id="transfer-payment-form" style="display: none;">
+                <div class="alert alert-info">
+                  <h6><i class="fas fa-info-circle me-2"></i>Instrucciones para transferencia</h6>
+                  <p class="mb-2">Transferencia a:</p>
+                  <ul class="mb-0">
+                    <li><strong>Banco:</strong> BBVA México</li>
+                    <li><strong>Cuenta:</strong> 0123 4567 8901 2345</li>
+                    <li><strong>CLABE:</strong> 012345678901234567</li>
+                    <li><strong>Beneficiario:</strong> Tienda Online SA de CV</li>
+                  </ul>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Número de referencia (últimos 4 dígitos)</label>
+                  <input type="text" class="form-control" id="transfer-reference" placeholder="1234" maxlength="4">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Billing Address -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-map-marker-alt me-2"></i>
+                Dirección de Facturación
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Calle y número</label>
+                  <input type="text" class="form-control" id="billing-street" placeholder="Av. Principal #123" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Colonia</label>
+                  <input type="text" class="form-control" id="billing-neighborhood" placeholder="Centro" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Ciudad</label>
+                  <input type="text" class="form-control" id="billing-city" placeholder="Monterrey" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Estado</label>
+                  <select class="form-select" id="billing-state" required>
+                    <option value="">Selecciona...</option>
+                    <option value="NL">Nuevo León</option>
+                    <option value="CDMX">Ciudad de México</option>
+                    <option value="JAL">Jalisco</option>
+                    <option value="MTY">Monterrey</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Código Postal</label>
+                  <input type="text" class="form-control" id="billing-zip" placeholder="64000" maxlength="5" required>
+                </div>
+              </div>
+              <div class="form-check mt-3">
+                <input class="form-check-input" type="checkbox" id="same-as-shipping" checked>
+                <label class="form-check-label" for="same-as-shipping">
+                  La dirección de facturación es la misma que la de envío
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-md-4">
+          <div class="order-summary">
+            <h5 class="mb-4">
+              <i class="fas fa-shopping-cart me-2"></i>
+              Resumen del Pedido
+            </h5>
+            
+            <div id="order-items">
+              <!-- Items will be loaded here -->
+            </div>
+            
+            <hr>
+            
+            <div class="d-flex justify-content-between mb-2">
+              <span>Subtotal:</span>
+              <span id="order-subtotal">$0</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Envío:</span>
+              <span id="order-shipping">$0</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>IVA (16%):</span>
+              <span id="order-tax">$0</span>
+            </div>
+            <div class="d-flex justify-content-between mb-3">
+              <span class="text-success">Descuento:</span>
+              <span class="text-success" id="order-discount">-$0</span>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between fw-bold fs-5 mb-4">
+              <span>Total:</span>
+              <span id="order-total">$0</span>
+            </div>
+            
+            <div class="mb-3">
+              <input type="text" class="form-control" id="promo-code" placeholder="Código de descuento">
+              <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="applyPromoCode()">
+                Aplicar código
+              </button>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100 btn-lg" id="submit-payment">
+              <i class="fas fa-lock me-2"></i>
+              Procesar Pago Seguro
+            </button>
+            
+            <div class="text-center mt-3">
+              <small class="text-muted">
+                <i class="fas fa-shield-alt me-1"></i>
+                Tu información está protegida con encriptación SSL
+              </small>
+            </div>
+            
+            <div class="mt-3 text-center">
+              <img src="https://picsum.photos/seed/payment-methods/200/40.jpg" alt="Métodos de pago" class="img-fluid">
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <!-- Processing Overlay -->
+  <div class="processing-overlay" id="processing-overlay">
+    <div class="processing-content">
+      <div class="spinner"></div>
+      <h5 class="mb-2">Procesando tu pago...</h5>
+      <p class="text-muted">Por favor espera, esto puede tardar unos segundos</p>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal fade" id="success-modal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-body text-center py-5">
+          <div class="success-animation mb-3">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h4 class="mb-2">¡Pago Exitoso!</h4>
+          <p class="text-muted mb-4">Tu pedido ha sido procesado correctamente</p>
+          <div class="mb-3">
+            <strong>Número de pedido:</strong> <span id="order-number">#12345</span>
+          </div>
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-primary" onclick="viewOrder()">
+              Ver mi pedido
+            </button>
+            <button type="button" class="btn btn-outline-primary" onclick="continueShopping()">
+              Seguir comprando
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="checkout-stripe.js"></script>
+</body>
+</html>
