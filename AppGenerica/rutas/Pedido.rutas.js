@@ -11,7 +11,7 @@ router.get('/reportes/resumen/csv', verificarToken, requiereRol(['ADMIN', 'SUPER
 router.get('/mis-pedidos', verificarToken, requiereRol(['CLIENTE']), pedidoCtrl.obtenerMisPedidos);
 router.get('/mis-pedidos-vendedor', verificarToken, requiereRol(['VENDEDOR']), pedidoCtrl.obtenerPedidosVendedor);
 router.get('/repartidor/asignados', verificarToken, requiereRol(['REPARTIDOR', 'ADMIN', 'SUPER_ADMIN']), pedidoCtrl.obtenerPedidosRepartidor);
-router.put('/:id', verificarToken, requiereRol(['ADMIN', 'SUPER_ADMIN', 'VENDEDOR', 'REPARTIDOR']), pedidoCtrl.actualizarPedido);
+router.put('/:id', verificarToken, requiereRol(['CLIENTE', 'ADMIN', 'SUPER_ADMIN', 'VENDEDOR', 'REPARTIDOR']), pedidoCtrl.actualizarPedido);
 router.delete('/:id', verificarToken, requiereRol(['ADMIN', 'SUPER_ADMIN']), pedidoCtrl.eliminarPedido);
 router.get('/:id', verificarToken, requiereRol(['CLIENTE', 'ADMIN', 'SUPER_ADMIN', 'VENDEDOR', 'REPARTIDOR']), pedidoCtrl.obtenerPedidoPorId);
 

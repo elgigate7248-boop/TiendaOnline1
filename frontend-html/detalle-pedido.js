@@ -121,6 +121,13 @@ if (!token) {
         ? `<div class="badge bg-success py-2 px-3"><i class="fas fa-check-circle me-1"></i>Pedido completado</div>`
         : '';
 
+      // Botón cancelar pedido (solo si no está entregado/cancelado)
+      const cancelBtn = pedido.id_estado < 5 && !esCancelado
+        ? `<button class="btn btn-outline-danger w-100 mt-2" onclick="cancelarPedido(${id})">
+             <i class="fas fa-times-circle me-1"></i>Cancelar pedido
+           </button>`
+        : '';
+
       let html = `
         <div class="row g-4">
           <div class="col-lg-8">
@@ -229,6 +236,7 @@ if (!token) {
             <a href="mis-pedidos.html" class="btn btn-outline-dark w-100">
               <i class="fas fa-arrow-left me-2"></i>Volver a mis pedidos
             </a>
+            ${cancelBtn}
 
           </div>
         </div>`;
@@ -239,3 +247,27 @@ if (!token) {
       cont.innerHTML = '<div class="alert alert-danger">Error al cargar el detalle del pedido. Intenta recargar la página.</div>';
     });
 }
+
+// ── Cancelar pedido ────────────────────────────────────────────────────────
+async function cancelarPedido(idPedido) {
+  if (!confirm('¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.')) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ id_estado: 5 })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al cancelar pedido');
+    }
+    alert('✅ Pedido cancelado correctamente');
+    window.location.reload();
+  } catch (err) {
+    alert('❌ ' + err.message);
+  }
+}
+window.cancelarPedido = cancelarPedido;

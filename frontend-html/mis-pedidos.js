@@ -103,8 +103,9 @@ if (!token) {
                 const etaStr = calcularEtaLista(p.fecha_pedido, p.id_estado);
                 return etaStr ? `<div class="small text-muted mt-2 mb-1"><i class="fas fa-calendar-check me-1 text-primary"></i><b>Entrega estimada:</b> ${etaStr}</div>` : '';
               })() : ''}
-              <div class="mt-2 text-end">
+              <div class="mt-2 d-flex gap-2 justify-content-end">
                 <a href="detalle-pedido.html?id=${id}" class="btn btn-sm btn-outline-dark">Ver detalle →</a>
+                ${p.id_estado < 5 && est.paso >= 0 ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido(${id})"><i class="fas fa-times-circle me-1"></i>Cancelar</button>` : ''}
               </div>
             </div>
           </div>`;
@@ -116,3 +117,27 @@ if (!token) {
       cont.innerHTML = '<div class="alert alert-danger">Error al cargar pedidos. Intenta recargar la página.</div>';
     });
 }
+
+// ── Cancelar pedido ────────────────────────────────────────────────────────
+async function cancelarPedido(idPedido) {
+  if (!confirm('¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.')) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ id_estado: 5 })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al cancelar pedido');
+    }
+    alert('✅ Pedido cancelado correctamente');
+    window.location.reload();
+  } catch (err) {
+    alert('❌ ' + err.message);
+  }
+}
+window.cancelarPedido = cancelarPedido;
