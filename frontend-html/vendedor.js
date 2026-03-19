@@ -451,6 +451,18 @@ async function verPedido(id) {
     if (!res.ok) throw new Error('Error al cargar pedido');
     const pedido = await res.json();
     
+    const ESTADOS_PEDIDO = [
+      { id: 1, nombre: 'Pendiente' },
+      { id: 2, nombre: 'Pagado' },
+      { id: 3, nombre: 'Enviado' },
+      { id: 4, nombre: 'Entregado' },
+      { id: 5, nombre: 'Cancelado' }
+    ];
+
+    const opcionesEstado = ESTADOS_PEDIDO.map(e =>
+      `<option value="${e.id}" ${e.id === pedido.id_estado ? 'selected' : ''}>${e.nombre}</option>`
+    ).join('');
+
     // Mostrar detalles en modal
     const detallesHtml = `
       <div class="row">
@@ -458,16 +470,24 @@ async function verPedido(id) {
           <h6>Información del Pedido</h6>
           <p><strong>ID:</strong> ${pedido.id_pedido}</p>
           <p><strong>Fecha:</strong> ${new Date(pedido.fecha_pedido).toLocaleString()}</p>
-          <p><strong>Cliente:</strong> ${pedido.nombre_cliente || 'N/A'}</p>
+          <p><strong>Cliente:</strong> ${pedido.nombre_cliente || pedido.usuario || 'N/A'}</p>
           <p><strong>Email:</strong> ${pedido.email_cliente || 'N/A'}</p>
           <p><strong>Estado:</strong> <span class="badge bg-${getEstadoBadgeClass(pedido.estado)}">${pedido.estado}</span></p>
         </div>
         <div class="col-md-6">
           <h6>Resumen</h6>
-          <p><strong>Subtotal:</strong> $${parseFloat(pedido.subtotal || 0).toFixed(2)}</p>
-          <p><strong>Envío:</strong> $${parseFloat(pedido.costo_envio || 0).toFixed(2)}</p>
           <p><strong>Total:</strong> $${parseFloat(pedido.total || 0).toFixed(2)}</p>
         </div>
+      </div>
+      <hr>
+      <h6><i class="fas fa-exchange-alt me-1"></i>Cambiar Estado del Pedido</h6>
+      <div class="d-flex gap-2 align-items-center mb-3">
+        <select class="form-select form-select-sm" id="selectEstadoPedido" style="max-width:200px;">
+          ${opcionesEstado}
+        </select>
+        <button class="btn btn-sm btn-primary" id="btnCambiarEstado" onclick="cambiarEstadoPedido(${pedido.id_pedido})">
+          <i class="fas fa-save me-1"></i>Guardar
+        </button>
       </div>
       <hr>
       <h6>Productos del Pedido</h6>
@@ -487,7 +507,7 @@ async function verPedido(id) {
                 <td>${escapeHtml(det.nombre_producto)}</td>
                 <td>${det.cantidad}</td>
                 <td>$${parseFloat(det.precio_unitario || 0).toFixed(2)}</td>
-                <td>$${parseFloat(det.subtotal || 0).toFixed(2)}</td>
+                <td>$${(det.cantidad * parseFloat(det.precio_unitario || 0)).toFixed(2)}</td>
               </tr>
             `).join('') : '<tr><td colspan="4">No hay detalles disponibles</td></tr>'}
           </tbody>
@@ -501,6 +521,37 @@ async function verPedido(id) {
   } catch (err) {
     console.error('Error al ver pedido:', err);
     showToast('Error al cargar detalles del pedido', 'error');
+  }
+}
+
+async function cambiarEstadoPedido(idPedido) {
+  const select = document.getElementById('selectEstadoPedido');
+  const btn = document.getElementById('btnCambiarEstado');
+  if (!select) return;
+
+  const nuevoEstado = parseInt(select.value);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+  try {
+    const res = await fetchAuth(`/pedido/${idPedido}`, {
+      method: 'PUT',
+      body: JSON.stringify({ id_estado: nuevoEstado })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al actualizar estado');
+    }
+    showToast('Estado del pedido actualizado correctamente', 'success');
+    bootstrap.Modal.getInstance(document.getElementById('modalPedido')).hide();
+    pedidosCargados = false;
+    cargarPedidos();
+  } catch (err) {
+    console.error('Error al cambiar estado:', err);
+    showToast(err.message || 'Error al cambiar estado del pedido', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i>Guardar';
   }
 }
 
