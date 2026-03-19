@@ -71,66 +71,6 @@ function renderTracker(pasoActual) {
   return `<div class="d-flex align-items-start" style="gap:0;overflow-x:auto;padding-bottom:4px;">${stepsHtml}</div>`;
 }
 
-// ── Demo: avanzar estado ───────────────────────────────────────────────────
-async function avanzarEstadoDemo(idPedido, idEstadoActual) {
-  const token = localStorage.getItem('token');
-  const nextId = Math.min(idEstadoActual + 1, 5);
-  if (nextId === idEstadoActual) return;
-  try {
-    const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ id_estado: nextId })
-    });
-    if (res.ok) {
-      window.location.reload();
-    } else {
-      const err = await res.json();
-      alert(err.error || 'No se pudo avanzar el estado');
-    }
-  } catch {
-    alert('Error de conexión');
-  }
-}
-window.avanzarEstadoDemo = avanzarEstadoDemo;
-
-// ── Auto-simulation: advances through all remaining states ─────────────────
-async function iniciarAutoSim(idPedido, idEstadoActual) {
-  const btn = document.getElementById('btnAutoSim');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Simulando...';
-  }
-
-  const MAX_STATE = 5;
-  let estado = idEstadoActual;
-
-  const avanzar = async () => {
-    if (estado >= MAX_STATE) {
-      window.location.reload();
-      return;
-    }
-    estado++;
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ id_estado: estado })
-      });
-      if (!res.ok) { window.location.reload(); return; }
-    } catch { window.location.reload(); return; }
-
-    if (estado < MAX_STATE) {
-      setTimeout(avanzar, 3000);
-    } else {
-      window.location.reload();
-    }
-  };
-
-  setTimeout(avanzar, 1000);
-}
-window.iniciarAutoSim = iniciarAutoSim;
 
 // ── Main ───────────────────────────────────────────────────────────────────
 const params = new URLSearchParams(window.location.search);
@@ -177,18 +117,9 @@ if (!token) {
       const detalles = Array.isArray(pedido.detalles) ? pedido.detalles : [];
       const esCancelado = (pedido.id_estado === 5 && (pedido.estado || '').toLowerCase().includes('cancel'));
 
-      // Botón demo: solo si no entregado/cancelado
-      const puedeSim = pedido.id_estado < 5;
-      const simBtn = puedeSim
-        ? `<div class="d-flex gap-2 flex-wrap">
-             <button class="btn btn-sm btn-outline-secondary" onclick="avanzarEstadoDemo(${id}, ${pedido.id_estado})">
-               <i class="fas fa-forward me-1"></i>Siguiente estado
-             </button>
-             <button class="btn btn-sm btn-outline-primary" onclick="iniciarAutoSim(${id}, ${pedido.id_estado})" id="btnAutoSim">
-               <i class="fas fa-play me-1"></i>Auto-simular flujo completo
-             </button>
-           </div>`
-        : `<div class="badge bg-success py-2 px-3"><i class="fas fa-check-circle me-1"></i>Pedido completado</div>`;
+      const simBtn = pedido.id_estado >= 5
+        ? `<div class="badge bg-success py-2 px-3"><i class="fas fa-check-circle me-1"></i>Pedido completado</div>`
+        : '';
 
       let html = `
         <div class="row g-4">
