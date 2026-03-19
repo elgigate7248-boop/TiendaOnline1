@@ -86,7 +86,7 @@ class EnhancedUI {
 
   async performSearch(query) {
     try {
-      const response = await fetch(`/producto/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`${API_BASE}/producto/search?q=${encodeURIComponent(query)}`);
       const results = await response.json();
       
       this.displaySearchResults(results);

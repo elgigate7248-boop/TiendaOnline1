@@ -32,7 +32,8 @@ if (!esVendedor) {
 }
 
 function fetchAuth(url, opts = {}) {
-  return fetch(url, {
+  const fullUrl = url.startsWith('/') ? API_BASE + url : url;
+  return fetch(fullUrl, {
     ...opts,
     headers: { ...(opts.headers || {}), 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
   });

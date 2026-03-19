@@ -54,25 +54,25 @@ class EmpleadoCRUD {
             }
 
             // Cargar empleados
-            const empleadosResponse = await fetch('/empleado/empleados', {
+            const empleadosResponse = await fetch(`${API_BASE}/empleado/empleados`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             this.empleados = await empleadosResponse.json();
 
             // Cargar roles
-            const rolesResponse = await fetch('/empleado/roles-empleado', {
+            const rolesResponse = await fetch(`${API_BASE}/empleado/roles-empleado`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             this.roles = await rolesResponse.json();
 
             // Cargar perfiles
-            const perfilesResponse = await fetch('/empleado/perfiles', {
+            const perfilesResponse = await fetch(`${API_BASE}/empleado/perfiles`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             this.perfiles = await perfilesResponse.json();
 
             // Cargar menú
-            const menuResponse = await fetch('/empleado/menu', {
+            const menuResponse = await fetch(`${API_BASE}/empleado/menu`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             this.menu = await menuResponse.json();
@@ -89,7 +89,7 @@ class EmpleadoCRUD {
     async cargarMenuUsuario() {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/empleado/menu-usuario', {
+            const response = await fetch(`${API_BASE}/empleado/menu-usuario`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const menuData = await response.json();
@@ -285,7 +285,7 @@ class EmpleadoCRUD {
     async cargarEmpleado(empleadoId) {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`/empleado/empleados/${empleadoId}`, {
+            const response = await fetch(`${API_BASE}/empleado/empleados/${empleadoId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const empleado = await response.json();
@@ -347,7 +347,7 @@ class EmpleadoCRUD {
                 perfiles: this.getPerfilesSeleccionados()
             };
 
-            const url = idEmpleado ? `/empleado/empleados/${idEmpleado}` : '/empleado/empleados';
+            const url = idEmpleado ? `${API_BASE}/empleado/empleados/${idEmpleado}` : `${API_BASE}/empleado/empleados`;
             const method = idEmpleado ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
@@ -391,7 +391,7 @@ class EmpleadoCRUD {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`/empleado/empleados/${empleadoId}`, {
+            const response = await fetch(`${API_BASE}/empleado/empleados/${empleadoId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -432,7 +432,7 @@ class EmpleadoCRUD {
     async cargarRoles() {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/empleado/roles-empleado', {
+            const response = await fetch(`${API_BASE}/empleado/roles-empleado`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             this.roles = await response.json();
@@ -470,7 +470,7 @@ class EmpleadoCRUD {
     async cargarPerfiles() {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/empleado/perfiles', {
+            const response = await fetch(`${API_BASE}/empleado/perfiles`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             this.perfiles = await response.json();
@@ -513,7 +513,7 @@ class EmpleadoCRUD {
     async cargarMenu() {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/empleado/menu', {
+            const response = await fetch(`${API_BASE}/empleado/menu`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             this.menu = await response.json();
@@ -570,7 +570,7 @@ class EmpleadoCRUD {
     async cargarPermisosPorPerfil(perfilId) {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`/empleado/permisos/perfil/${perfilId}`, {
+            const response = await fetch(`${API_BASE}/empleado/permisos/perfil/${perfilId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const permisos = await response.json();
