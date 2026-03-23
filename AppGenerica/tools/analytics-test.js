@@ -18,7 +18,7 @@ router.get('/test', verificarToken, async (req, res) => {
     // Test query básica
     const [testResult] = await db.execute('SELECT COUNT(*) as count FROM usuario');
     
-    console.log('🧪 Analytics API test exitoso');
+    console.log(' Analytics API test exitoso');
     
     res.json({ 
       success: true,
@@ -28,7 +28,7 @@ router.get('/test', verificarToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error en analytics test:', error);
+    console.error(' Error en analytics test:', error);
     res.status(500).json({ 
       error: 'Error en analytics test',
       details: error.message 
@@ -58,7 +58,7 @@ router.get('/test-kpi', verificarToken, async (req, res) => {
         (SELECT COUNT(*) FROM producto WHERE stock <= 10) as productos_bajo_stock
     `);
 
-    console.log('🧪 KPIs test exitoso:', kpis[0]);
+    console.log(' KPIs test exitoso:', kpis[0]);
     
     res.json({ 
       success: true,
@@ -67,7 +67,7 @@ router.get('/test-kpi', verificarToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error en KPIs test:', error);
+    console.error(' Error en KPIs test:', error);
     res.status(500).json({ 
       error: 'Error en KPIs test',
       details: error.message 
@@ -114,7 +114,7 @@ router.get('/test-charts', verificarToken, async (req, res) => {
       LIMIT 5
     `);
 
-    console.log('🧪 Charts data test exitoso');
+    console.log(' Charts data test exitoso');
     
     res.json({ 
       success: true,
@@ -124,7 +124,7 @@ router.get('/test-charts', verificarToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error en charts test:', error);
+    console.error(' Error en charts test:', error);
     res.status(500).json({ 
       error: 'Error en charts test',
       details: error.message 

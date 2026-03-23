@@ -113,7 +113,7 @@ app.get("/", (req, res) => {
 
 
 app.use((req, res) => {
-  console.log(`❌ 404 - ${req.method} ${req.path}`);
+  console.log(` 404 - ${req.method} ${req.path}`);
   res.status(404).json({
     error: "Ruta no encontrada",
     method: req.method,
@@ -124,7 +124,7 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log("\n╔══════════════════════════════════════╗");
-  console.log(`║  ✅ API corriendo en puerto ${PORT}   ║`);
+  console.log(`║   API corriendo en puerto ${PORT}   ║`);
   console.log("╚══════════════════════════════════════╝");
-  console.log(`📡 http://localhost:${PORT}`);
+  console.log(` http://localhost:${PORT}`);
 });
