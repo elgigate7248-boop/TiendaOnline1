@@ -173,6 +173,20 @@ exports.obtenerPedidoPorId = async (req, res) => {
 
 exports.actualizarPedido = async (req, res) => {
   try {
+    // Verificar permisos: CLIENTE solo puede modificar sus propios pedidos
+    const userRoles = req.usuario.roles || (req.usuario.rol ? [req.usuario.rol] : []);
+    const isCliente = userRoles.includes('CLIENTE');
+    
+    if (isCliente) {
+      const pedido = await servicio.buscarPorId(req.params.id);
+      if (!pedido) {
+        return res.status(404).json({ error: 'Pedido no encontrado' });
+      }
+      if (pedido.id_usuario !== req.usuario.id_usuario && pedido.id_usuario !== req.usuario.id) {
+        return res.status(403).json({ error: 'Solo puedes modificar tus propios pedidos' });
+      }
+    }
+
     const payload = {
       id_usuario: req.body.id_usuario || req.body.IdUsuario,
       id_estado: req.body.id_estado || req.body.IdEstado,
