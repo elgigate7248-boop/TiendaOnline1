@@ -5,6 +5,7 @@ const { redis, USER_CACHE_TTL }      = require('../config/redis');
 const REDIS_PREFIX = 'user:';
 const SESSION_PREFIX = 'session:';
 const PERMISOS_PREFIX = 'permisos:';
+const MENU_KEY = 'menu:navegacion';
 
 // ── Helpers Redis ────────────────────────────────────────────────────────────
 
@@ -187,6 +188,136 @@ async function createInDatabase(userData) {
   };
 }
 
+// ── Actualización de credenciales (email / contraseña) ──────────────────────
+
+/**
+ * Actualiza el email del usuario en MySQL y sincroniza Redis.
+ * @param {number} userId
+ * @param {string} emailAnterior
+ * @param {string} emailNuevo
+ */
+async function updateEmail(userId, emailAnterior, emailNuevo) {
+  // 1. Actualizar en MySQL
+  await pool.execute(
+    'UPDATE usuario SET email = ? WHERE id_usuario = ?',
+    [emailNuevo, userId]
+  );
+  console.log(`📝 MySQL UPDATE email → ${emailAnterior} → ${emailNuevo}`);
+
+  // 2. Eliminar cache antigua de Redis
+  await removeFromCache(emailAnterior);
+
+  // 3. Obtener datos actualizados y re-cachear
+  const updatedUser = await findInDatabase(emailNuevo);
+  if (updatedUser) {
+    await saveToCache(updatedUser);
+    console.log(`🔄 Redis ACTUALIZADO → nueva clave user:${emailNuevo}`);
+  }
+
+  return updatedUser;
+}
+
+/**
+ * Actualiza la contraseña del usuario en MySQL y sincroniza Redis.
+ * @param {number} userId
+ * @param {string} email
+ * @param {string} newHashedPassword  Ya hasheado con bcrypt
+ */
+async function updatePassword(userId, email, newHashedPassword) {
+  // 1. Actualizar en MySQL
+  await pool.execute(
+    'UPDATE usuario SET contrasena = ? WHERE id_usuario = ?',
+    [newHashedPassword, userId]
+  );
+  console.log(`📝 MySQL UPDATE contraseña → usuario ${email}`);
+
+  // 2. Actualizar cache en Redis con nuevo hash
+  const updatedUser = await findInDatabase(email);
+  if (updatedUser) {
+    await saveToCache(updatedUser);
+    console.log(`🔄 Redis ACTUALIZADO contraseña → user:${email}`);
+  }
+
+  return updatedUser;
+}
+
+// ── Menú de Navegación (Redis cache ← MySQL) ─────────────────────────────────
+
+/**
+ * Obtiene el menú de navegación desde Redis.
+ * Si no está en cache, lo carga desde MySQL y lo guarda en Redis.
+ * @param {string} rol  Rol del usuario para filtrar permisos
+ * @return {object[]}   Lista de opciones del menú
+ */
+async function getMenu(rol) {
+  try {
+    // 1. Intentar Redis
+    const cached = await redis.get(MENU_KEY);
+    if (cached) {
+      console.log(`⚡ Menu Cache HIT (Redis)`);
+      const fullMenu = JSON.parse(cached);
+      return filtrarMenuPorRol(fullMenu, rol);
+    }
+
+    // 2. Si no está en Redis, cargar desde MySQL
+    console.log(`🗄️  Menu DB HIT → cargando desde MySQL...`);
+    const [rows] = await pool.execute(
+      `SELECT id_menu, nombre_opcion, icono, ruta, descripcion,
+             menu_padre_id, orden_visualizacion, activo
+       FROM menu_navegacion
+       WHERE activo = 1
+       ORDER BY orden_visualizacion ASC`
+    );
+
+    // 3. Guardar en Redis
+    await redis.set(MENU_KEY, JSON.stringify(rows), 'EX', USER_CACHE_TTL);
+    console.log(`💾 Menu GUARDADO en Redis (${rows.length} opciones, TTL ${USER_CACHE_TTL}s)`);
+
+    return filtrarMenuPorRol(rows, rol);
+  } catch (err) {
+    console.error('⚠️  Error obteniendo menú:', err.message);
+    // Fallback directo a MySQL si Redis falla
+    const [rows] = await pool.execute(
+      `SELECT id_menu, nombre_opcion, icono, ruta, descripcion,
+             menu_padre_id, orden_visualizacion, activo
+       FROM menu_navegacion WHERE activo = 1 ORDER BY orden_visualizacion ASC`
+    );
+    return filtrarMenuPorRol(rows, rol);
+  }
+}
+
+/**
+ * Filtra las opciones del menú según el rol del usuario.
+ * ADMIN ve todo, otros ven opciones limitadas.
+ */
+function filtrarMenuPorRol(menu, rol) {
+  const rutasPublicas = ['/', '/perfil'];
+  const rutasPorRol = {
+    ADMIN:    null, // null = ve TODO
+    VENDEDOR: ['/admin/productos', '/admin/pedidos', '/admin/reportes', '/perfil'],
+    CLIENTE:  ['/perfil', '/mis-pedidos', '/catalogo'],
+    REPARTIDOR: ['/admin/pedidos', '/perfil']
+  };
+
+  const rutasPermitidas = rutasPorRol[rol];
+  if (rutasPermitidas === null || rutasPermitidas === undefined) return menu;
+
+  const todasPermitidas = [...rutasPublicas, ...rutasPermitidas];
+  return menu.filter(item => todasPermitidas.some(rp => item.ruta && item.ruta.startsWith(rp)));
+}
+
+/**
+ * Invalida la cache del menú en Redis (cuando se modifica en MySQL).
+ */
+async function invalidateMenuCache() {
+  try {
+    await redis.del(MENU_KEY);
+    console.log(`🗑️  Menu cache INVALIDADO en Redis`);
+  } catch (err) {
+    console.error('⚠️  Error invalidando menu cache:', err.message);
+  }
+}
+
 // ── API pública del repositorio ──────────────────────────────────────────────
 
 /**
@@ -220,5 +351,9 @@ module.exports = {
   getSession,
   removeSession,
   getPermisos,
-  obtenerPermisosPorRol
+  obtenerPermisosPorRol,
+  updateEmail,
+  updatePassword,
+  getMenu,
+  invalidateMenuCache
 };

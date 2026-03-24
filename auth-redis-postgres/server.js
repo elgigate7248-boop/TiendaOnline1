@@ -45,8 +45,14 @@ async function iniciar() {
     console.log(`\n Servidor de autenticación corriendo en http://localhost:${PORT}`);
     console.log(`   POST  /api/auth/login`);
     console.log(`   POST  /api/auth/registro`);
-    console.log(`   POST  /api/auth/logout    (requiere token)`);
-    console.log(`   GET   /api/auth/perfil    (requiere token)`);
+    console.log(`   POST  /api/auth/logout           (token)`);
+    console.log(`   GET   /api/auth/perfil           (token)`);
+    console.log(`   PUT   /api/auth/cambiar-email    (token) → MySQL + Redis`);
+    console.log(`   PUT   /api/auth/cambiar-password (token) → MySQL + Redis`);
+    console.log(`   GET   /api/auth/menu             (token) → Redis cache`);
+    console.log(`   DEL   /api/auth/menu/invalidar`);
+    console.log(`   GET   /api/auth/redis/keys`);
+    console.log(`   DEL   /api/auth/redis/flush`);
     console.log(`   GET   /health\n`);
   });
 }
