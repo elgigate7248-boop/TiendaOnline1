@@ -26,7 +26,7 @@ function generarToken(user) {
  * Flujo completo de login:
  *
  *  1. Buscar usuario en Redis (caché).
- *  2. Si no está → buscar en PostgreSQL → cachear en Redis.
+ *  2. Si no está → buscar en MySQL → cachear en Redis.
  *  3. Validar contraseña con bcrypt.
  *  4. Si es correcta → generar JWT y retornar datos.
  *
@@ -36,7 +36,7 @@ function generarToken(user) {
  * @throws {Error}             Con propiedad `status` (401, 404, 500)
  */
 async function login(email, password) {
-  // ── 1–2. Buscar usuario (Redis → PostgreSQL) ─────────────────────────────
+  // ── 1–2. Buscar usuario (Redis → MySQL) ─────────────────────────────────
   const user = await userRepo.findByEmail(email);
 
   if (!user) {
@@ -71,7 +71,7 @@ async function login(email, password) {
  *
  *  1. Verificar que el email no exista.
  *  2. Hashear la contraseña con bcrypt.
- *  3. Insertar en PostgreSQL.
+ *  3. Insertar en MySQL.
  *  4. Cachear en Redis.
  *  5. Generar JWT.
  *
@@ -90,7 +90,7 @@ async function registro(datos) {
   // 2. Hash de contraseña
   const hashedPassword = await bcrypt.hash(datos.password, SALT_ROUNDS);
 
-  // 3. Insertar en PostgreSQL
+  // 3. Insertar en MySQL
   const nuevoUsuario = await userRepo.createInDatabase({
     nombre:   datos.nombre,
     email:    datos.email,

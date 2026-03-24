@@ -12,4 +12,8 @@ router.post('/registro', authCtrl.registro);
 router.post('/logout', verificarToken, authCtrl.logout);
 router.get('/perfil',  verificarToken, authCtrl.perfil);
 
+// Rutas de administración de Redis (ver y borrar claves)
+router.get('/redis/keys',      authCtrl.redisKeys);
+router.delete('/redis/flush',  authCtrl.redisFlush);
+
 module.exports = router;

@@ -131,3 +131,64 @@ exports.perfil = async (req, res) => {
     usuario: req.usuario
   });
 };
+
+/**
+ * GET /api/auth/redis/keys
+ * Muestra todas las variables clave-valor almacenadas en Redis.
+ */
+exports.redisKeys = async (_req, res) => {
+  try {
+    const { redis } = require('../config/redis');
+    const keys = await redis.keys('user:*');
+
+    const datos = {};
+    for (const key of keys) {
+      const value = await redis.get(key);
+      const ttl   = await redis.ttl(key);
+      datos[key] = {
+        valor: JSON.parse(value),
+        ttl_segundos: ttl
+      };
+    }
+
+    res.json({
+      success: true,
+      total_claves: keys.length,
+      claves: datos
+    });
+  } catch (err) {
+    console.error('Error listando claves Redis:', err.message);
+    res.status(500).json({ success: false, error: 'Error al consultar Redis' });
+  }
+};
+
+/**
+ * DELETE /api/auth/redis/flush
+ * Borra TODAS las variables clave-valor de usuarios en Redis.
+ */
+exports.redisFlush = async (_req, res) => {
+  try {
+    const { redis } = require('../config/redis');
+    const keys = await redis.keys('user:*');
+
+    if (keys.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No hay claves en Redis para borrar',
+        eliminadas: 0
+      });
+    }
+
+    await redis.del(...keys);
+
+    res.json({
+      success: true,
+      message: `Se eliminaron todas las variables clave-valor de Redis`,
+      eliminadas: keys.length,
+      claves_borradas: keys
+    });
+  } catch (err) {
+    console.error('Error borrando claves Redis:', err.message);
+    res.status(500).json({ success: false, error: 'Error al borrar claves de Redis' });
+  }
+};
