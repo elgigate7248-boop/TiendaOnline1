@@ -61,5 +61,74 @@ CREATE TABLE IF NOT EXISTS estado_pedido (
 
 -- pedido.id_estado → estado_pedido.id_estado (FK ya existente)
 
+-- ── Dominio: departamento_empresa (departamentos internos de la empresa) ────
+CREATE TABLE IF NOT EXISTS departamento_empresa (
+    id_departamento INT AUTO_INCREMENT PRIMARY KEY,
+    nombre          VARCHAR(100) NOT NULL,
+    descripcion     VARCHAR(255) NULL,
+    activo          TINYINT(1) DEFAULT 1
+);
+
+INSERT INTO departamento_empresa (nombre, descripcion) VALUES
+('Ventas', 'Departamento de ventas y comercial'),
+('Administracion', 'Departamento de administracion general'),
+('Tecnologia', 'Departamento de tecnologia e informatica'),
+('Recursos Humanos', 'Departamento de gestion del talento humano'),
+('Logistica', 'Departamento de logistica y distribucion'),
+('Bodega', 'Departamento de almacen y bodega'),
+('Servicio al Cliente', 'Departamento de atencion al cliente'),
+('Contabilidad', 'Departamento de contabilidad y finanzas'),
+('Marketing', 'Departamento de marketing y publicidad'),
+('Gerencia', 'Gerencia general');
+
+-- ── Dominio: puesto (cargos de empleados) ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS puesto (
+    id_puesto      INT AUTO_INCREMENT PRIMARY KEY,
+    nombre         VARCHAR(100) NOT NULL,
+    descripcion    VARCHAR(255) NULL,
+    salario_minimo DECIMAL(10,2) NULL,
+    salario_maximo DECIMAL(10,2) NULL,
+    activo         TINYINT(1) DEFAULT 1
+);
+
+INSERT INTO puesto (nombre, descripcion, salario_minimo, salario_maximo) VALUES
+('Gerente General', 'Direccion general de la empresa', 5000000, 10000000),
+('Supervisor', 'Supervision de area o departamento', 3000000, 5000000),
+('Vendedor', 'Atencion y ventas al publico', 1500000, 2500000),
+('Cajero', 'Manejo de caja y cobros', 1300000, 2000000),
+('Bodeguero', 'Manejo de inventario y bodega', 1300000, 2000000),
+('Repartidor', 'Entrega de pedidos y envios', 1300000, 2200000),
+('Analista de Sistemas', 'Soporte tecnico y desarrollo', 2500000, 4500000),
+('Contador', 'Gestion contable y tributaria', 2500000, 4000000),
+('Auxiliar Administrativo', 'Apoyo en tareas administrativas', 1300000, 1800000),
+('Coordinador de Logistica', 'Coordinacion de envios y rutas', 2000000, 3500000),
+('Ejecutivo de Servicio al Cliente', 'Atencion y soporte al cliente', 1500000, 2500000),
+('Community Manager', 'Manejo de redes sociales y marketing', 1800000, 3000000);
+
+-- ── Dominio: estado_empleado ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS estado_empleado (
+    id_estado_empleado INT AUTO_INCREMENT PRIMARY KEY,
+    nombre             VARCHAR(30) NOT NULL
+);
+
+INSERT INTO estado_empleado (nombre) VALUES ('activo'), ('inactivo'), ('suspendido');
+
+-- ── Dominio: estado_solicitud (para vendedor_solicitud y repartidor_solicitud)
+CREATE TABLE IF NOT EXISTS estado_solicitud (
+    id_estado_solicitud INT AUTO_INCREMENT PRIMARY KEY,
+    nombre              VARCHAR(30) NOT NULL
+);
+
+INSERT INTO estado_solicitud (nombre) VALUES ('PENDIENTE'), ('APROBADA'), ('RECHAZADA');
+
+-- ── Tabla empleado (con FKs a dominios) ─────────────────────────────────────
+-- empleado.id_departamento_empresa → departamento_empresa.id_departamento
+-- empleado.id_puesto               → puesto.id_puesto
+-- empleado.id_estado_empleado      → estado_empleado.id_estado_empleado
+
+-- ── Tablas de solicitudes (con FK a estado_solicitud) ───────────────────────
+-- vendedor_solicitud.id_estado_solicitud   → estado_solicitud.id_estado_solicitud
+-- repartidor_solicitud.id_estado_solicitud → estado_solicitud.id_estado_solicitud
+
 -- La tabla `rol` y `usuario_rol` ya manejan los roles en el proyecto existente.
 -- El sistema de auth con Redis usa la tabla `usuario` tal como está.
