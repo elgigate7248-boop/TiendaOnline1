@@ -57,12 +57,18 @@ async function login(email, password) {
   // ── 4. Generar JWT ────────────────────────────────────────────────────────
   const token = generarToken(user);
 
+  // ── 5. Guardar sesion con permisos en Redis ─────────────────────────────
+  await userRepo.saveSession(token, user);
+
   // Retornar sin exponer el hash de contraseña
   const { password: _, ...usuarioSeguro } = user;
 
   return {
     token,
-    usuario: usuarioSeguro
+    usuario: {
+      ...usuarioSeguro,
+      permisos: userRepo.obtenerPermisosPorRol(user.rol || 'CLIENTE')
+    }
   };
 }
 
@@ -98,7 +104,7 @@ async function registro(datos) {
     rol:      datos.rol || 'CLIENTE'
   });
 
-  // 4. Cachear en Redis (guardar con hash para validar login desde caché)
+  // 4. Cachear usuario en Redis (guardar con hash para validar login desde caché)
   await userRepo.saveToCache({
     ...nuevoUsuario,
     password: hashedPassword
@@ -107,9 +113,15 @@ async function registro(datos) {
   // 5. Generar JWT
   const token = generarToken(nuevoUsuario);
 
+  // 6. Guardar sesion con permisos en Redis
+  await userRepo.saveSession(token, nuevoUsuario);
+
   return {
     token,
-    usuario: nuevoUsuario
+    usuario: {
+      ...nuevoUsuario,
+      permisos: userRepo.obtenerPermisosPorRol(nuevoUsuario.rol || 'CLIENTE')
+    }
   };
 }
 
@@ -117,8 +129,9 @@ async function registro(datos) {
  * Cierre de sesión — invalida la caché del usuario.
  * @param {string} email
  */
-async function logout(email) {
+async function logout(email, token) {
   await userRepo.removeFromCache(email);
+  await userRepo.removeSession(token, email);
 }
 
 module.exports = {

@@ -3,6 +3,8 @@ const { pool }                       = require('../config/db');
 const { redis, USER_CACHE_TTL }      = require('../config/redis');
 
 const REDIS_PREFIX = 'user:';
+const SESSION_PREFIX = 'session:';
+const PERMISOS_PREFIX = 'permisos:';
 
 // ── Helpers Redis ────────────────────────────────────────────────────────────
 
@@ -47,6 +49,100 @@ async function removeFromCache(email) {
   } catch (err) {
     console.error('⚠️  Error eliminando de Redis:', err.message);
   }
+}
+
+/**
+ * Guarda una sesion activa en Redis con los permisos del usuario.
+ * Se crea al hacer login exitoso.
+ * @param {string} token  JWT del usuario
+ * @param {object} user   { id, email, nombre, rol }
+ */
+async function saveSession(token, user) {
+  try {
+    const sessionData = {
+      id:     user.id,
+      email:  user.email,
+      nombre: user.nombre,
+      rol:    user.rol,
+      permisos: obtenerPermisosPorRol(user.rol),
+      loginAt: new Date().toISOString()
+    };
+    await redis.set(SESSION_PREFIX + token, JSON.stringify(sessionData), 'EX', USER_CACHE_TTL);
+    console.log(`🔐 Sesion CREADA en Redis → ${user.email} (rol: ${user.rol})`);
+
+    // Guardar permisos del usuario por email
+    await redis.set(
+      PERMISOS_PREFIX + user.email,
+      JSON.stringify({ rol: user.rol, permisos: obtenerPermisosPorRol(user.rol) }),
+      'EX', USER_CACHE_TTL
+    );
+    console.log(`🛡️  Permisos GUARDADOS en Redis → ${user.email}: [${obtenerPermisosPorRol(user.rol).join(', ')}]`);
+  } catch (err) {
+    console.error('⚠️  Error guardando sesion en Redis:', err.message);
+  }
+}
+
+/**
+ * Obtiene la sesion activa desde Redis usando el token JWT.
+ * @param  {string}       token
+ * @return {object|null}  Datos de sesion con permisos o null
+ */
+async function getSession(token) {
+  try {
+    const data = await redis.get(SESSION_PREFIX + token);
+    if (!data) return null;
+    console.log(`🔐 Sesion VERIFICADA desde Redis`);
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('⚠️  Error leyendo sesion de Redis:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Elimina la sesion activa de Redis (logout).
+ * @param {string} token
+ * @param {string} email
+ */
+async function removeSession(token, email) {
+  try {
+    await redis.del(SESSION_PREFIX + token);
+    await redis.del(PERMISOS_PREFIX + email);
+    console.log(`🔐 Sesion ELIMINADA de Redis → ${email}`);
+  } catch (err) {
+    console.error('⚠️  Error eliminando sesion de Redis:', err.message);
+  }
+}
+
+/**
+ * Obtiene los permisos del usuario desde Redis.
+ * @param  {string}       email
+ * @return {object|null}  { rol, permisos: [...] }
+ */
+async function getPermisos(email) {
+  try {
+    const data = await redis.get(PERMISOS_PREFIX + email);
+    if (!data) return null;
+    console.log(`🛡️  Permisos LEIDOS desde Redis → ${email}`);
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('⚠️  Error leyendo permisos de Redis:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Define los permisos segun el rol del usuario.
+ * @param  {string}   rol  'ADMIN', 'VENDEDOR', 'CLIENTE'
+ * @return {string[]}      Lista de permisos
+ */
+function obtenerPermisosPorRol(rol) {
+  const permisosPorRol = {
+    ADMIN:    ['leer', 'escribir', 'eliminar', 'gestionar_usuarios', 'gestionar_pedidos', 'ver_reportes'],
+    VENDEDOR: ['leer', 'escribir', 'gestionar_pedidos', 'ver_reportes'],
+    CLIENTE:  ['leer', 'crear_pedido', 'ver_mis_pedidos', 'cancelar_pedido']
+  };
+  return permisosPorRol[rol] || ['leer'];
 }
 
 // ── Helpers MySQL (Aiven) ────────────────────────────────────────────────────
@@ -119,5 +215,10 @@ module.exports = {
   findInDatabase,
   saveToCache,
   removeFromCache,
-  createInDatabase
+  createInDatabase,
+  saveSession,
+  getSession,
+  removeSession,
+  getPermisos,
+  obtenerPermisosPorRol
 };

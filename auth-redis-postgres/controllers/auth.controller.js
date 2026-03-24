@@ -103,13 +103,14 @@ exports.registro = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     const email = req.usuario?.email;
+    const token = req.token;
     if (email) {
-      await authService.logout(email);
+      await authService.logout(email, token);
     }
 
     res.json({
       success: true,
-      message: 'Sesión cerrada correctamente'
+      message: 'Sesión cerrada correctamente (cache + sesion + permisos eliminados de Redis)'
     });
   } catch (err) {
     console.error('❌ Error en logout:', err.message);
@@ -128,7 +129,8 @@ exports.logout = async (req, res) => {
 exports.perfil = async (req, res) => {
   res.json({
     success: true,
-    usuario: req.usuario
+    usuario: req.usuario,
+    permisos_verificados_en: req.origenPermisos || 'jwt'
   });
 };
 
@@ -139,21 +141,48 @@ exports.perfil = async (req, res) => {
 exports.redisKeys = async (_req, res) => {
   try {
     const { redis } = require('../config/redis');
-    const keys = await redis.keys('user:*');
 
-    const datos = {};
-    for (const key of keys) {
+    // Buscar TODOS los tipos de claves
+    const userKeys    = await redis.keys('user:*');
+    const sessionKeys = await redis.keys('session:*');
+    const permKeys    = await redis.keys('permisos:*');
+    const allKeys     = [...userKeys, ...sessionKeys, ...permKeys];
+
+    const datos = {
+      usuarios: {},
+      sesiones: {},
+      permisos: {}
+    };
+
+    for (const key of userKeys) {
       const value = await redis.get(key);
       const ttl   = await redis.ttl(key);
-      datos[key] = {
-        valor: JSON.parse(value),
-        ttl_segundos: ttl
-      };
+      datos.usuarios[key] = { valor: JSON.parse(value), ttl_segundos: ttl };
+    }
+
+    for (const key of sessionKeys) {
+      const value = await redis.get(key);
+      const ttl   = await redis.ttl(key);
+      const parsed = JSON.parse(value);
+      // Ocultar el token completo en la clave, mostrar solo los ultimos 10 chars
+      const shortKey = 'session:...' + key.slice(-10);
+      datos.sesiones[shortKey] = { valor: parsed, ttl_segundos: ttl };
+    }
+
+    for (const key of permKeys) {
+      const value = await redis.get(key);
+      const ttl   = await redis.ttl(key);
+      datos.permisos[key] = { valor: JSON.parse(value), ttl_segundos: ttl };
     }
 
     res.json({
       success: true,
-      total_claves: keys.length,
+      total_claves: allKeys.length,
+      resumen: {
+        usuarios: userKeys.length,
+        sesiones: sessionKeys.length,
+        permisos: permKeys.length
+      },
       claves: datos
     });
   } catch (err) {
@@ -169,9 +198,14 @@ exports.redisKeys = async (_req, res) => {
 exports.redisFlush = async (_req, res) => {
   try {
     const { redis } = require('../config/redis');
-    const keys = await redis.keys('user:*');
 
-    if (keys.length === 0) {
+    // Buscar TODOS los tipos de claves
+    const userKeys    = await redis.keys('user:*');
+    const sessionKeys = await redis.keys('session:*');
+    const permKeys    = await redis.keys('permisos:*');
+    const allKeys     = [...userKeys, ...sessionKeys, ...permKeys];
+
+    if (allKeys.length === 0) {
       return res.json({
         success: true,
         message: 'No hay claves en Redis para borrar',
@@ -179,13 +213,18 @@ exports.redisFlush = async (_req, res) => {
       });
     }
 
-    await redis.del(...keys);
+    await redis.del(...allKeys);
 
     res.json({
       success: true,
-      message: `Se eliminaron todas las variables clave-valor de Redis`,
-      eliminadas: keys.length,
-      claves_borradas: keys
+      message: 'Se eliminaron TODAS las variables clave-valor de Redis',
+      eliminadas: allKeys.length,
+      detalle: {
+        usuarios_eliminados: userKeys.length,
+        sesiones_eliminadas: sessionKeys.length,
+        permisos_eliminados: permKeys.length
+      },
+      claves_borradas: allKeys.map(k => k.startsWith('session:') ? 'session:...' + k.slice(-10) : k)
     });
   } catch (err) {
     console.error('Error borrando claves Redis:', err.message);
