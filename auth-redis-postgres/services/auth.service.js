@@ -130,7 +130,7 @@ async function registro(datos) {
  * @param {string} email
  */
 async function logout(email, token) {
-  await userRepo.removeFromCache(email);
+  // Solo eliminar sesión y permisos, NO el cache del usuario (es persistente)
   await userRepo.removeSession(token, email);
 }
 

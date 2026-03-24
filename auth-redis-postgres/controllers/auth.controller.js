@@ -261,12 +261,25 @@ exports.redisKeys = async (_req, res) => {
   try {
     const { redis } = require('../config/redis');
 
-    // Buscar TODOS los tipos de claves
-    const userKeys    = await redis.keys('user:*');
-    const sessionKeys = await redis.keys('session:*');
-    const permKeys    = await redis.keys('permisos:*');
-    const menuKeys    = await redis.keys('menu:*');
+    // SCAN robusto (funciona donde KEYS puede fallar)
+    async function scanKeys(pattern) {
+      const keys = [];
+      let cursor = '0';
+      do {
+        const reply = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = reply[0];
+        keys.push(...reply[1]);
+      } while (cursor !== '0');
+      return keys;
+    }
+
+    const userKeys    = await scanKeys('user:*');
+    const sessionKeys = await scanKeys('session:*');
+    const permKeys    = await scanKeys('permisos:*');
+    const menuKeys    = await scanKeys('menu:*');
     const allKeys     = [...userKeys, ...sessionKeys, ...permKeys, ...menuKeys];
+
+    console.log(`🔍 SCAN: ${userKeys.length} users, ${sessionKeys.length} sessions, ${permKeys.length} permisos, ${menuKeys.length} menus`);
 
     const datos = {
       usuarios: {},
@@ -327,11 +340,21 @@ exports.redisFlush = async (_req, res) => {
   try {
     const { redis } = require('../config/redis');
 
-    // Buscar TODOS los tipos de claves
-    const userKeys    = await redis.keys('user:*');
-    const sessionKeys = await redis.keys('session:*');
-    const permKeys    = await redis.keys('permisos:*');
-    const menuKeys    = await redis.keys('menu:*');
+    async function scanKeys(pattern) {
+      const keys = [];
+      let cursor = '0';
+      do {
+        const reply = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = reply[0];
+        keys.push(...reply[1]);
+      } while (cursor !== '0');
+      return keys;
+    }
+
+    const userKeys    = await scanKeys('user:*');
+    const sessionKeys = await scanKeys('session:*');
+    const permKeys    = await scanKeys('permisos:*');
+    const menuKeys    = await scanKeys('menu:*');
     const allKeys     = [...userKeys, ...sessionKeys, ...permKeys, ...menuKeys];
 
     if (allKeys.length === 0) {

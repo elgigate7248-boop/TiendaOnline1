@@ -16,9 +16,13 @@ const MENU_KEY = 'menu:navegacion';
  */
 async function findInCache(email) {
   try {
-    const data = await redis.get(REDIS_PREFIX + email);
-    if (!data) return null;
-    console.log(`⚡ Cache HIT → ${email}`);
+    const key = REDIS_PREFIX + email;
+    const data = await redis.get(key);
+    if (!data) {
+      console.log(`🔍 Cache MISS → ${key} (buscará en MySQL)`);
+      return null;
+    }
+    console.log(`⚡ Cache HIT → ${key}`);
     return JSON.parse(data);
   } catch (err) {
     console.error('⚠️  Error leyendo Redis (se continúa con MySQL):', err.message);
@@ -27,16 +31,19 @@ async function findInCache(email) {
 }
 
 /**
- * Guarda un usuario en Redis con TTL.
+ * Guarda un usuario en Redis SIN TTL (persistente).
  * @param {object} user  Debe contener al menos { email }
  */
 async function saveToCache(user) {
   try {
     const key = REDIS_PREFIX + user.email;
-    await redis.set(key, JSON.stringify(user), 'EX', USER_CACHE_TTL);
-    console.log(`💾 Cache SET → ${user.email}  (TTL ${USER_CACHE_TTL}s)`);
+    const data = JSON.stringify(user);
+    await redis.set(key, data);  // SIN TTL — persistente
+    console.log(`💾 Cache SET → ${key} (${data.length} bytes, PERSISTENTE)`);
+    return true;
   } catch (err) {
-    console.error('⚠️  Error escribiendo en Redis:', err.message);
+    console.error(`❌ REDIS SAVE ERROR (${REDIS_PREFIX + user.email}):`, err.message);
+    return false;
   }
 }
 
@@ -172,18 +179,20 @@ async function findInDatabase(email) {
  * @return {object}  Usuario creado
  */
 async function createInDatabase(userData) {
+  const rol = userData.rol || 'CLIENTE';
   const [result] = await pool.execute(
-    `INSERT INTO usuario (nombre, email, contrasena, fecha_registro)
-     VALUES (?, ?, ?, NOW())`,
-    [userData.nombre, userData.email, userData.password]
+    `INSERT INTO usuario (nombre, email, contrasena, rol, fecha_registro)
+     VALUES (?, ?, ?, ?, NOW())`,
+    [userData.nombre, userData.email, userData.password, rol]
   );
 
-  // Retornar el usuario recién creado
+  console.log(`📊 MySQL INSERT → ${userData.email} (id: ${result.insertId}, rol: ${rol})`);
+
   return {
     id:         result.insertId,
     nombre:     userData.nombre,
     email:      userData.email,
-    rol:        userData.rol || 'CLIENTE',
+    rol:        rol,
     created_at: new Date()
   };
 }
