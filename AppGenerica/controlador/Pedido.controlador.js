@@ -171,19 +171,51 @@ exports.obtenerPedidoPorId = async (req, res) => {
   }
 };
 
+// Transiciones de estado permitidas por rol
+// Estados: 1=Pendiente, 2=Confirmado, 3=Preparando, 4=En camino, 5=Entregado, 6=Cancelado
+const TRANSICIONES_POR_ROL = {
+  VENDEDOR:   { 1: [2, 6], 2: [3, 6], 3: [4] },
+  REPARTIDOR: { 2: [3], 3: [4], 4: [5] },
+  ADMIN:      null, // null = cualquier transición
+  SUPER_ADMIN: null
+};
+
 exports.actualizarPedido = async (req, res) => {
   try {
-    // Verificar permisos: CLIENTE solo puede modificar sus propios pedidos
     const userRoles = req.usuario.roles || (req.usuario.rol ? [req.usuario.rol] : []);
     const isCliente = userRoles.includes('CLIENTE');
-    
+    const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN');
+
+    const pedido = await servicio.buscarPorId(req.params.id);
+    if (!pedido) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
+    // CLIENTE solo puede modificar sus propios pedidos
     if (isCliente) {
-      const pedido = await servicio.buscarPorId(req.params.id);
-      if (!pedido) {
-        return res.status(404).json({ error: 'Pedido no encontrado' });
-      }
       if (pedido.id_usuario !== req.usuario.id_usuario && pedido.id_usuario !== req.usuario.id) {
         return res.status(403).json({ error: 'Solo puedes modificar tus propios pedidos' });
+      }
+    }
+
+    // Validar transición de estado por rol
+    const nuevoEstado = Number(req.body.id_estado || req.body.IdEstado);
+    if (nuevoEstado && !isAdmin) {
+      const estadoActual = pedido.id_estado;
+      let permitido = false;
+
+      for (const rol of userRoles) {
+        const transiciones = TRANSICIONES_POR_ROL[rol];
+        if (transiciones === null) { permitido = true; break; }
+        if (transiciones && transiciones[estadoActual] && transiciones[estadoActual].includes(nuevoEstado)) {
+          permitido = true; break;
+        }
+      }
+
+      if (!permitido) {
+        return res.status(403).json({
+          error: `No puedes cambiar el estado de ${estadoActual} a ${nuevoEstado} con tu rol`
+        });
       }
     }
 
