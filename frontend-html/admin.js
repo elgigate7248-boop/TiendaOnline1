@@ -611,10 +611,11 @@ let usuariosPedidoCache = [];
 function badgeEstadoPedido(idEstado) {
   const estado = Number(idEstado);
   if (estado === 1) return '<span class="badge bg-warning text-dark">Pendiente</span>';
-  if (estado === 2) return '<span class="badge bg-primary">Pagado</span>';
-  if (estado === 3) return '<span class="badge bg-info text-dark">Enviado</span>';
-  if (estado === 4) return '<span class="badge bg-success">Entregado</span>';
-  if (estado === 5) return '<span class="badge bg-danger">Cancelado</span>';
+  if (estado === 2) return '<span class="badge bg-info text-dark">Confirmado</span>';
+  if (estado === 3) return '<span class="badge bg-primary">Preparando</span>';
+  if (estado === 4) return '<span class="badge bg-info">En camino</span>';
+  if (estado === 5) return '<span class="badge bg-success">Entregado</span>';
+  if (estado === 6) return '<span class="badge bg-danger">Cancelado</span>';
   return '<span class="badge bg-secondary">Desconocido</span>';
 }
 
@@ -653,10 +654,11 @@ function ensurePedidoModal() {
                   <label class="form-label fw-semibold">Estado</label>
                   <select id="pedidoCrudEstado" class="form-select" required>
                     <option value="1">Pendiente</option>
-                    <option value="2">Pagado</option>
-                    <option value="3">Enviado</option>
-                    <option value="4">Entregado</option>
-                    <option value="5">Cancelado</option>
+                    <option value="2">Confirmado</option>
+                    <option value="3">Preparando</option>
+                    <option value="4">En camino</option>
+                    <option value="5">Entregado</option>
+                    <option value="6">Cancelado</option>
                   </select>
                 </div>
                 <div class="col-md-6">
@@ -773,10 +775,11 @@ function renderPedidosDesdeCache() {
         <select id="filtroEstadoPedido" class="form-select form-select-sm" style="width:auto;">
           <option value="" ${!estadoFiltro ? 'selected' : ''}>Todos</option>
           <option value="1" ${estadoFiltro === '1' ? 'selected' : ''}>Pendiente</option>
-          <option value="2" ${estadoFiltro === '2' ? 'selected' : ''}>Pagado</option>
-          <option value="3" ${estadoFiltro === '3' ? 'selected' : ''}>Enviado</option>
-          <option value="4" ${estadoFiltro === '4' ? 'selected' : ''}>Entregado</option>
-          <option value="5" ${estadoFiltro === '5' ? 'selected' : ''}>Cancelado</option>
+          <option value="2" ${estadoFiltro === '2' ? 'selected' : ''}>Confirmado</option>
+          <option value="3" ${estadoFiltro === '3' ? 'selected' : ''}>Preparando</option>
+          <option value="4" ${estadoFiltro === '4' ? 'selected' : ''}>En camino</option>
+          <option value="5" ${estadoFiltro === '5' ? 'selected' : ''}>Entregado</option>
+          <option value="6" ${estadoFiltro === '6' ? 'selected' : ''}>Cancelado</option>
         </select>
         <button class="btn btn-sm btn-outline-dark" type="button" onclick="cargarPedidos()">Refrescar</button>
       </div>
@@ -797,10 +800,11 @@ function renderPedidosDesdeCache() {
     const controlEstado = puedeCrudPedidos
       ? `<select class="form-select form-select-sm" style="width:auto;" onchange="cambiarEstadoPedido(${id}, this.value)">
         <option value="1" ${p.id_estado == 1 ? 'selected' : ''}>Pendiente</option>
-        <option value="2" ${p.id_estado == 2 ? 'selected' : ''}>Pagado</option>
-        <option value="3" ${p.id_estado == 3 ? 'selected' : ''}>Enviado</option>
-        <option value="4" ${p.id_estado == 4 ? 'selected' : ''}>Entregado</option>
-        <option value="5" ${p.id_estado == 5 ? 'selected' : ''}>Cancelado</option>
+        <option value="2" ${p.id_estado == 2 ? 'selected' : ''}>Confirmado</option>
+        <option value="3" ${p.id_estado == 3 ? 'selected' : ''}>Preparando</option>
+        <option value="4" ${p.id_estado == 4 ? 'selected' : ''}>En camino</option>
+        <option value="5" ${p.id_estado == 5 ? 'selected' : ''}>Entregado</option>
+        <option value="6" ${p.id_estado == 6 ? 'selected' : ''}>Cancelado</option>
       </select>`
       : badgeEstadoPedido(p.id_estado);
     const acciones = puedeCrudPedidos

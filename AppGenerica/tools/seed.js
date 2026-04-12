@@ -24,7 +24,8 @@ async function seed() {
         }
 
         // Estados de pedido
-        const estados = ['Pendiente', 'Pagado', 'Enviado', 'Entregado', 'Cancelado'];
+        // IDs: 1=Pendiente, 2=Confirmado, 3=Preparando, 4=En camino, 5=Entregado, 6=Cancelado
+        const estados = ['Pendiente', 'Confirmado', 'Preparando', 'En camino', 'Entregado', 'Cancelado'];
         for (const e of estados) {
             await pool.execute("INSERT INTO estado_pedido (nombre_estado) VALUES (?)", [e]);
         }

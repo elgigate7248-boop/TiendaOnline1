@@ -304,9 +304,11 @@ function renderPedidos(pedidos) {
 
 function getEstadoBadgeClass(estado) {
   switch (estado?.toLowerCase()) {
-    case 'completado': return 'success';
-    case 'enviado': return 'info';
-    case 'procesando': return 'warning';
+    case 'pendiente': return 'warning';
+    case 'confirmado': return 'info';
+    case 'preparando': case 'preparando pedido': return 'primary';
+    case 'en camino': return 'info';
+    case 'entregado': return 'success';
     case 'cancelado': return 'danger';
     default: return 'secondary';
   }
@@ -321,7 +323,7 @@ function actualizarEstadisticasProductos(productos) {
 // Actualizar estadísticas de pedidos
 function actualizarEstadisticasPedidos(pedidos) {
   const ingresos = pedidos.reduce((sum, p) => sum + parseFloat(p.total || 0), 0);
-  const activos = pedidos.filter(p => ['pendiente','procesando','enviado'].includes((p.estado || '').toLowerCase())).length;
+  const activos = pedidos.filter(p => ['pendiente','confirmado','preparando','preparando pedido','en camino'].includes((p.estado || '').toLowerCase())).length;
 
   const ventasEl = document.getElementById('ventasMes');
   const ingresosEl = document.getElementById('ingresosMes');
@@ -453,10 +455,11 @@ async function verPedido(id) {
     
     const ESTADOS_PEDIDO = [
       { id: 1, nombre: 'Pendiente' },
-      { id: 2, nombre: 'Pagado' },
-      { id: 3, nombre: 'Enviado' },
-      { id: 4, nombre: 'Entregado' },
-      { id: 5, nombre: 'Cancelado' }
+      { id: 2, nombre: 'Confirmado' },
+      { id: 3, nombre: 'Preparando' },
+      { id: 4, nombre: 'En camino' },
+      { id: 5, nombre: 'Entregado' },
+      { id: 6, nombre: 'Cancelado' }
     ];
 
     const opcionesEstado = ESTADOS_PEDIDO.map(e =>

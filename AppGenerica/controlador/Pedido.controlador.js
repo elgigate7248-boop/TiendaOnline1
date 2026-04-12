@@ -174,6 +174,7 @@ exports.obtenerPedidoPorId = async (req, res) => {
 // Transiciones de estado permitidas por rol
 // Estados: 1=Pendiente, 2=Confirmado, 3=Preparando, 4=En camino, 5=Entregado, 6=Cancelado
 const TRANSICIONES_POR_ROL = {
+  CLIENTE:    { 1: [6], 2: [6] },
   VENDEDOR:   { 1: [2, 6], 2: [3, 6], 3: [4] },
   REPARTIDOR: { 2: [3], 3: [4], 4: [5] },
   ADMIN:      null, // null = cualquier transición

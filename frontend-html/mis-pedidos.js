@@ -5,6 +5,7 @@ const ESTADOS = {
   3: { label: 'Preparando pedido', icon: '📦', badge: 'bg-primary',           paso: 2, color: '#8b5cf6' },
   4: { label: 'En camino',         icon: '🚚', badge: 'bg-info text-white',   paso: 3, color: '#06b6d4' },
   5: { label: 'Entregado',         icon: '🎉', badge: 'bg-success',           paso: 4, color: '#10b981' },
+  6: { label: 'Cancelado',         icon: '❌', badge: 'bg-danger',            paso: -1, color: '#ef4444' },
 };
 const ESTADO_CANCELADO = { label: 'Cancelado', icon: '❌', badge: 'bg-danger', paso: -1, color: '#ef4444' };
 
@@ -105,7 +106,7 @@ if (!token) {
               })() : ''}
               <div class="mt-2 d-flex gap-2 justify-content-end">
                 <a href="detalle-pedido.html?id=${id}" class="btn btn-sm btn-outline-dark">Ver detalle →</a>
-                ${p.id_estado < 5 && est.paso >= 0 ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido(${id})"><i class="fas fa-times-circle me-1"></i>Cancelar</button>` : ''}
+                ${p.id_estado < 5 && p.id_estado !== 6 && est.paso >= 0 ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido(${id})"><i class="fas fa-times-circle me-1"></i>Cancelar</button>` : ''}
               </div>
             </div>
           </div>`;
@@ -128,7 +129,7 @@ async function cancelarPedido(idPedido) {
     const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ id_estado: 5 })
+      body: JSON.stringify({ id_estado: 6 })
     });
     if (!res.ok) {
       const err = await res.json();

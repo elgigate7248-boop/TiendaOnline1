@@ -175,11 +175,12 @@ class GestionPedidos {
 
   renderPedidoCard(pedido) {
     const estados = {
-      1: { text: 'Pendiente', class: 'warning', icon: 'clock' },
-      2: { text: 'Pagado', class: 'info', icon: 'credit-card' },
-      3: { text: 'Enviado', class: 'primary', icon: 'truck' },
-      4: { text: 'Entregado', class: 'success', icon: 'check-circle' },
-      5: { text: 'Cancelado', class: 'danger', icon: 'times-circle' }
+      1: { text: 'Pendiente',  class: 'warning', icon: 'clock' },
+      2: { text: 'Confirmado', class: 'info',    icon: 'check-circle' },
+      3: { text: 'Preparando', class: 'primary', icon: 'box-open' },
+      4: { text: 'En camino',  class: 'info',    icon: 'truck' },
+      5: { text: 'Entregado',  class: 'success', icon: 'check-double' },
+      6: { text: 'Cancelado',  class: 'danger',  icon: 'times-circle' }
     };
 
     const estado = estados[pedido.id_estado] || { text: 'Desconocido', class: 'secondary', icon: 'question' };
@@ -217,7 +218,7 @@ class GestionPedidos {
                 <button class="btn btn-sm btn-outline-info" onclick="gestionPedidos.imprimirPedido(${pedido.id_pedido})" title="Imprimir">
                   <i class="fas fa-print"></i>
                 </button>
-                ${pedido.id_estado !== 4 && pedido.id_estado !== 5 ? 
+                ${pedido.id_estado !== 5 && pedido.id_estado !== 6 ? 
                   `<button class="btn btn-sm btn-outline-danger" onclick="gestionPedidos.cancelarPedido(${pedido.id_pedido})" title="Cancelar">
                     <i class="fas fa-times"></i>
                   </button>` : ''
@@ -319,10 +320,11 @@ class GestionPedidos {
 
   renderTimeline(estado) {
     const timeline = {
-      2: '<div class="timeline-item"><div class="fw-semibold">Pago confirmado</div><small class="text-muted">Procesando...</small></div>',
-      3: '<div class="timeline-item"><div class="fw-semibold">Enviado</div><small class="text-muted">En camino...</small></div>',
-      4: '<div class="timeline-item"><div class="fw-semibold">Entregado</div><small class="text-muted">Completado</small></div>',
-      5: '<div class="timeline-item"><div class="fw-semibold text-danger">Cancelado</div><small class="text-muted">Pedido anulado</small></div>'
+      2: '<div class="timeline-item"><div class="fw-semibold">Confirmado</div><small class="text-muted">Pago verificado</small></div>',
+      3: '<div class="timeline-item"><div class="fw-semibold">Preparando</div><small class="text-muted">En preparación...</small></div>',
+      4: '<div class="timeline-item"><div class="fw-semibold">En camino</div><small class="text-muted">En ruta de entrega...</small></div>',
+      5: '<div class="timeline-item"><div class="fw-semibold">Entregado</div><small class="text-muted">Completado</small></div>',
+      6: '<div class="timeline-item"><div class="fw-semibold text-danger">Cancelado</div><small class="text-muted">Pedido anulado</small></div>'
     };
     
     return timeline[estado] || '';
@@ -384,7 +386,7 @@ class GestionPedidos {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          id_estado: 5 // Cancelado
+          id_estado: 6 // Cancelado
         })
       });
 
@@ -445,10 +447,11 @@ class GestionPedidos {
   getEstadoClass(estado) {
     const classes = {
       1: 'warning',
-      2: 'info', 
+      2: 'info',
       3: 'primary',
-      4: 'success',
-      5: 'danger'
+      4: 'info',
+      5: 'success',
+      6: 'danger'
     };
     return classes[estado] || 'secondary';
   }
@@ -456,10 +459,11 @@ class GestionPedidos {
   getEstadoText(estado) {
     const texts = {
       1: 'Pendiente',
-      2: 'Pagado',
-      3: 'Enviado', 
-      4: 'Entregado',
-      5: 'Cancelado'
+      2: 'Confirmado',
+      3: 'Preparando',
+      4: 'En camino',
+      5: 'Entregado',
+      6: 'Cancelado'
     };
     return texts[estado] || 'Desconocido';
   }

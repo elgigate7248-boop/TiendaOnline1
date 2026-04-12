@@ -5,6 +5,7 @@ const ESTADOS_MAP = {
   3: { label: 'Preparando pedido', icon: 'fa-box',           color: '#8b5cf6', paso: 2 },
   4: { label: 'En camino',         icon: 'fa-truck',         color: '#06b6d4', paso: 3 },
   5: { label: 'Entregado',         icon: 'fa-check-double',  color: '#10b981', paso: 4 },
+  6: { label: 'Cancelado',         icon: 'fa-times-circle',  color: '#ef4444', paso: -1 },
 };
 const ESTADO_CANCELADO = { label: 'Cancelado', icon: 'fa-times-circle', color: '#ef4444', paso: -1 };
 
@@ -115,14 +116,16 @@ if (!token) {
       const eta = calcularETA(pedido.fecha_pedido, pedido.id_estado, pedido.detalles, ciudad);
 
       const detalles = Array.isArray(pedido.detalles) ? pedido.detalles : [];
-      const esCancelado = (pedido.id_estado === 5 && (pedido.estado || '').toLowerCase().includes('cancel'));
+      const esCancelado = pedido.id_estado === 6 || (pedido.estado || '').toLowerCase().includes('cancel');
 
-      const simBtn = pedido.id_estado >= 5
-        ? `<div class="badge bg-success py-2 px-3"><i class="fas fa-check-circle me-1"></i>Pedido completado</div>`
-        : '';
+      const simBtn = esCancelado
+        ? `<div class="badge bg-danger py-2 px-3"><i class="fas fa-times-circle me-1"></i>Pedido cancelado</div>`
+        : pedido.id_estado === 5
+          ? `<div class="badge bg-success py-2 px-3"><i class="fas fa-check-circle me-1"></i>Pedido completado</div>`
+          : '';
 
       // Botón cancelar pedido (solo si no está entregado/cancelado)
-      const cancelBtn = pedido.id_estado < 5 && !esCancelado
+      const cancelBtn = pedido.id_estado < 5 && pedido.id_estado !== 6 && !esCancelado
         ? `<button class="btn btn-outline-danger w-100 mt-2" onclick="cancelarPedido(${id})">
              <i class="fas fa-times-circle me-1"></i>Cancelar pedido
            </button>`
@@ -258,7 +261,7 @@ async function cancelarPedido(idPedido) {
     const res = await fetch(`${API_BASE}/pedido/${idPedido}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ id_estado: 5 })
+      body: JSON.stringify({ id_estado: 6 })
     });
     if (!res.ok) {
       const err = await res.json();
