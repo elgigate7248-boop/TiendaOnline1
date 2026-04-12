@@ -104,8 +104,8 @@ async function insertar(pedido) {
         );
 
         const [stockUpdate] = await connection.execute(
-          `UPDATE producto SET stock = stock - ?, stock_actual = GREATEST(COALESCE(stock_actual, stock) - ?, 0) WHERE id_producto = ? AND stock >= ?`,
-          [cantidad, cantidad, detalle.id_producto, cantidad]
+          `UPDATE producto SET stock = stock - ? WHERE id_producto = ? AND stock >= ?`,
+          [cantidad, detalle.id_producto, cantidad]
         );
 
         if (!stockUpdate.affectedRows) {
@@ -271,8 +271,8 @@ async function eliminar(id) {
         const idProducto = Number(d.id_producto) || 0;
         if (cantidad > 0 && idProducto > 0) {
           await connection.execute(
-            `UPDATE producto SET stock = stock + ?, stock_actual = COALESCE(stock_actual, stock) + ? WHERE id_producto = ?`,
-            [cantidad, cantidad, idProducto]
+            `UPDATE producto SET stock = stock + ? WHERE id_producto = ?`,
+            [cantidad, idProducto]
           );
         }
       }
