@@ -81,6 +81,21 @@ let ventasChartInstance = null;
 let productosChartInstance = null;
 let pedidosCargados = false;
 
+const ESTADOS_PEDIDO = [
+  { id: 1, nombre: 'Pendiente' },
+  { id: 2, nombre: 'Confirmado' },
+  { id: 3, nombre: 'Preparando' },
+  { id: 4, nombre: 'En camino' },
+  { id: 5, nombre: 'Entregado' },
+  { id: 6, nombre: 'Cancelado' }
+];
+
+const TRANSICIONES_VENDEDOR = {
+  1: [2, 6],
+  2: [3, 6],
+  3: [4]
+};
+
 // Cargar información del vendedor
 async function cargarInfoVendedor() {
   try {
@@ -452,19 +467,16 @@ async function verPedido(id) {
     const res = await fetchAuth(`/pedido/${id}`);
     if (!res.ok) throw new Error('Error al cargar pedido');
     const pedido = await res.json();
-    
-    const ESTADOS_PEDIDO = [
-      { id: 1, nombre: 'Pendiente' },
-      { id: 2, nombre: 'Confirmado' },
-      { id: 3, nombre: 'Preparando' },
-      { id: 4, nombre: 'En camino' },
-      { id: 5, nombre: 'Entregado' },
-      { id: 6, nombre: 'Cancelado' }
-    ];
 
-    const opcionesEstado = ESTADOS_PEDIDO.map(e =>
-      `<option value="${e.id}" ${e.id === pedido.id_estado ? 'selected' : ''}>${e.nombre}</option>`
-    ).join('');
+    const estadoActual = Number(pedido.id_estado || 0);
+    const estadosPermitidos = TRANSICIONES_VENDEDOR[estadoActual] || [];
+    const opcionesEstado = estadosPermitidos.length
+      ? estadosPermitidos
+        .map((idEstado) => ESTADOS_PEDIDO.find((estado) => estado.id === idEstado))
+        .filter(Boolean)
+        .map((estado) => `<option value="${estado.id}">${estado.nombre}</option>`)
+        .join('')
+      : '<option value="">Sin cambios disponibles</option>';
 
     // Mostrar detalles en modal
     const detallesHtml = `
@@ -485,10 +497,10 @@ async function verPedido(id) {
       <hr>
       <h6><i class="fas fa-exchange-alt me-1"></i>Cambiar Estado del Pedido</h6>
       <div class="d-flex gap-2 align-items-center mb-3">
-        <select class="form-select form-select-sm" id="selectEstadoPedido" style="max-width:200px;">
+        <select class="form-select form-select-sm" id="selectEstadoPedido" style="max-width:200px;" ${estadosPermitidos.length ? '' : 'disabled'}>
           ${opcionesEstado}
         </select>
-        <button class="btn btn-sm btn-primary" id="btnCambiarEstado" onclick="cambiarEstadoPedido(${pedido.id_pedido})">
+        <button class="btn btn-sm btn-primary" id="btnCambiarEstado" onclick="cambiarEstadoPedido(${pedido.id_pedido})" ${estadosPermitidos.length ? '' : 'disabled'}>
           <i class="fas fa-save me-1"></i>Guardar
         </button>
       </div>
@@ -533,6 +545,11 @@ async function cambiarEstadoPedido(idPedido) {
   if (!select) return;
 
   const nuevoEstado = parseInt(select.value);
+  if (!Number.isFinite(nuevoEstado)) {
+    showToast('Este pedido no tiene cambios de estado disponibles para vendedor', 'info');
+    return;
+  }
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
 

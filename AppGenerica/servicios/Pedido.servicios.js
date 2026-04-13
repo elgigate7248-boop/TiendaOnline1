@@ -17,6 +17,27 @@ async function listar() {
   return rows;
 }
 
+async function vendedorTienePedido(idPedido, idVendedor) {
+  const pedidoId = Number(idPedido);
+  const vendedorId = Number(idVendedor);
+
+  if (!Number.isFinite(pedidoId) || pedidoId <= 0) return false;
+  if (!Number.isFinite(vendedorId) || vendedorId <= 0) return false;
+
+  const [rows] = await db.execute(
+    `
+    SELECT 1
+    FROM detalle_pedido dp
+    JOIN producto pr ON dp.id_producto = pr.id_producto
+    WHERE dp.id_pedido = ? AND pr.id_vendedor = ?
+    LIMIT 1
+    `,
+    [pedidoId, vendedorId]
+  );
+
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 
 async function listarPorUsuario(idUsuario) {
   const [rows] = await db.execute(
@@ -381,6 +402,7 @@ module.exports = {
   listar,
   listarPorUsuario,
   listarPorVendedor,
+  vendedorTienePedido,
   listarParaRepartidor,
   insertar,
   buscarPorId,

@@ -185,6 +185,7 @@ exports.actualizarPedido = async (req, res) => {
   try {
     const userRoles = req.usuario.roles || (req.usuario.rol ? [req.usuario.rol] : []);
     const isCliente = userRoles.includes('CLIENTE');
+    const isVendedor = userRoles.includes('VENDEDOR');
     const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN');
 
     const pedido = await servicio.buscarPorId(req.params.id);
@@ -196,6 +197,14 @@ exports.actualizarPedido = async (req, res) => {
     if (isCliente) {
       if (pedido.id_usuario !== req.usuario.id_usuario && pedido.id_usuario !== req.usuario.id) {
         return res.status(403).json({ error: 'Solo puedes modificar tus propios pedidos' });
+      }
+    }
+
+    if (isVendedor && !isAdmin) {
+      const idVendedor = req.usuario.id_usuario || req.usuario.id;
+      const tienePedidoAsignado = await servicio.vendedorTienePedido(req.params.id, idVendedor);
+      if (!tienePedidoAsignado) {
+        return res.status(403).json({ error: 'No puedes modificar pedidos que no contienen tus productos' });
       }
     }
 
@@ -217,6 +226,23 @@ exports.actualizarPedido = async (req, res) => {
         return res.status(403).json({
           error: `No puedes cambiar el estado de ${estadoActual} a ${nuevoEstado} con tu rol`
         });
+      }
+    }
+
+    if (isVendedor && !isAdmin) {
+      if (
+        req.body.id_usuario !== undefined ||
+        req.body.IdUsuario !== undefined ||
+        req.body.total !== undefined ||
+        req.body.Total !== undefined ||
+        req.body.fecha_pedido !== undefined ||
+        req.body.FechaPedido !== undefined
+      ) {
+        return res.status(403).json({ error: 'Vendedor solo puede actualizar el estado del pedido' });
+      }
+
+      if (!nuevoEstado) {
+        return res.status(400).json({ error: 'Debes enviar id_estado para actualizar el pedido' });
       }
     }
 
