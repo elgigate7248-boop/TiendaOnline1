@@ -186,6 +186,7 @@ exports.actualizarPedido = async (req, res) => {
     const userRoles = req.usuario.roles || (req.usuario.rol ? [req.usuario.rol] : []);
     const isCliente = userRoles.includes('CLIENTE');
     const isVendedor = userRoles.includes('VENDEDOR');
+    const isRepartidor = userRoles.includes('REPARTIDOR');
     const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN');
 
     const pedido = await servicio.buscarPorId(req.params.id);
@@ -193,8 +194,8 @@ exports.actualizarPedido = async (req, res) => {
       return res.status(404).json({ error: 'Pedido no encontrado' });
     }
 
-    // CLIENTE solo puede modificar sus propios pedidos
-    if (isCliente) {
+    // CLIENTE solo puede modificar sus propios pedidos cuando no actua con otro rol operativo
+    if (isCliente && !isVendedor && !isRepartidor && !isAdmin) {
       if (pedido.id_usuario !== req.usuario.id_usuario && pedido.id_usuario !== req.usuario.id) {
         return res.status(403).json({ error: 'Solo puedes modificar tus propios pedidos' });
       }
