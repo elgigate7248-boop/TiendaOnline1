@@ -14,7 +14,8 @@
     "stripe:webhook": "stripe listen --forward-to localhost:5000/payment/webhook",
     "email:test": "node tools/email-test.js",
     "analytics:test": "node tools/analytics-test.js",
-    "db:migrate-estados": "node tools/migrate-estados.js"
+    "db:migrate-estados": "node tools/migrate-estados.js",
+    "db:migrate-inventario": "node tools/migrate-movimiento-inventario.js"
   },
   "author": "",
   "license": "ISC",

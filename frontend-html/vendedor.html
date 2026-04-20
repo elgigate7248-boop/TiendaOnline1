@@ -479,6 +479,11 @@
         </button>
       </li>
       <li class="nav-item" role="presentation">
+        <button class="nav-link" id="inventario-tab" data-bs-toggle="tab" data-bs-target="#inventario" type="button" role="tab">
+          <i class="fas fa-file-invoice-dollar me-2"></i>Inventario
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
         <button class="nav-link" id="perfil-tab" data-bs-toggle="tab" data-bs-target="#perfil" type="button" role="tab">
           <i class="fas fa-user me-2"></i>Mi Perfil
         </button>
@@ -784,6 +789,129 @@
         </div>
       </div>
 
+      <!-- Inventario Tab -->
+      <div class="tab-pane fade" id="inventario" role="tabpanel">
+        <!-- Resumen financiero cards -->
+        <div class="row g-4 mb-4">
+          <div class="col-md-3">
+            <div class="card stat-card bg-success text-white">
+              <div class="card-body">
+                <h6 class="card-title mb-1"><i class="fas fa-coins me-1"></i>Ganancia Neta</h6>
+                <h3 class="mb-0" id="invGananciaNeta">$0</h3>
+                <small class="opacity-75">Descontada comisi&oacute;n</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white">
+              <div class="card-body">
+                <h6 class="card-title mb-1"><i class="fas fa-cash-register me-1"></i>Total Ventas</h6>
+                <h3 class="mb-0" id="invTotalVentas">$0</h3>
+                <small class="opacity-75">Ingresos brutos</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white">
+              <div class="card-body">
+                <h6 class="card-title mb-1"><i class="fas fa-percentage me-1"></i>Comisi&oacute;n Plataforma</h6>
+                <h3 class="mb-0" id="invComisionTotal">$0</h3>
+                <small class="opacity-75">Total retenido</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card bg-info text-white">
+              <div class="card-body">
+                <h6 class="card-title mb-1"><i class="fas fa-truck-loading me-1"></i>Invertido</h6>
+                <h3 class="mb-0" id="invTotalInvertido">$0</h3>
+                <small class="opacity-75">Compras / producci&oacute;n</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <!-- Registrar Entrada -->
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-arrow-circle-down me-2"></i>Registrar Entrada (Compra)</h6>
+              </div>
+              <div class="card-body">
+                <form id="formEntradaInventario" onsubmit="return false;">
+                  <div class="mb-3">
+                    <label class="form-label">Producto</label>
+                    <select class="form-select" id="entradaProducto" required>
+                      <option value="">Selecciona un producto</option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Cantidad</label>
+                    <input type="number" class="form-control" id="entradaCantidad" min="1" required placeholder="Ej: 50">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Costo unitario de compra ($)</label>
+                    <input type="number" class="form-control" id="entradaCostoUnitario" min="0" step="0.01" required placeholder="Ej: 15.00">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Referencia (opcional)</label>
+                    <input type="text" class="form-control" id="entradaReferencia" placeholder="Ej: Factura #123">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Observaciones (opcional)</label>
+                    <textarea class="form-control" id="entradaObservaciones" rows="2" placeholder="Ej: Compra a proveedor X"></textarea>
+                  </div>
+                  <button type="button" class="btn btn-success w-100" id="btnRegistrarEntrada" onclick="registrarEntradaInventario()">
+                    <i class="fas fa-plus-circle me-1"></i>Registrar Entrada
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Historial de movimientos -->
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Movimientos de Inventario</h6>
+                <div class="d-flex gap-2">
+                  <select class="form-select form-select-sm" id="filtroTipoMov" style="width:auto;" onchange="cargarMovimientos()">
+                    <option value="">Todos</option>
+                    <option value="ENTRADA">Entradas</option>
+                    <option value="SALIDA">Salidas</option>
+                  </select>
+                  <button class="btn btn-light btn-sm" onclick="cargarMovimientos()">
+                    <i class="fas fa-sync-alt"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-hover table-sm">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Costo Unit.</th>
+                        <th>P. Venta</th>
+                        <th>Ganancia Neta</th>
+                        <th>Ref.</th>
+                      </tr>
+                    </thead>
+                    <tbody id="movimientosTableBody">
+                      <tr><td colspan="8" class="text-center text-muted py-3">Cargando movimientos...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Perfil Tab -->
       <div class="tab-pane fade" id="perfil" role="tabpanel">
         <div class="row">
@@ -903,6 +1031,18 @@
             </div>
             <div class="row">
               <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fas fa-dollar-sign me-1 text-success"></i>Costo de compra/producci&oacute;n</label>
+                <input type="number" class="form-control" id="productoCostoCompra" step="0.01" min="0" placeholder="Ej: 10.00">
+                <div class="form-text">Cu&aacute;nto te cuesta producir o comprar una unidad</div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fas fa-percentage me-1 text-warning"></i>Comisi&oacute;n plataforma (%)</label>
+                <input type="number" class="form-control" id="productoComision" step="0.1" min="0" max="100" value="5" placeholder="5">
+                <div class="form-text">Porcentaje que cobra la plataforma (default 5%)</div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
                 <label class="form-label">Categoría</label>
                 <select class="form-select" id="productoCategoria" required>
                   <option value="">Selecciona una categoría</option>
@@ -949,6 +1089,32 @@
         </div>
         <div class="modal-body">
           <div id="pedidoDetalles"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-success btn-sm" id="btnVerFactura" style="display:none;" onclick="verFacturaPedido()">
+            <i class="fas fa-file-invoice-dollar me-1"></i>Ver Factura
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Factura -->
+  <div class="modal fade" id="modalFactura" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-file-invoice-dollar me-2"></i>Factura del Vendedor
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="facturaContenido">
+          <div class="text-center py-4">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2 text-muted">Generando factura...</p>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>

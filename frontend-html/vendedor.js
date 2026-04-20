@@ -374,6 +374,9 @@ function editarProducto(id) {
   document.getElementById('productoImagen').value = producto.imagen || '';
   document.getElementById('productoCiudadOrigen').value = producto.ciudad_origen || '';
   document.getElementById('productoTiempoPreparacion').value = producto.tiempo_preparacion ?? 1;
+  document.getElementById('productoCostoCompra').value = producto.costo_compra || '';
+  const comisionPct = producto.comision_plataforma != null ? (Number(producto.comision_plataforma) * 100) : 5;
+  document.getElementById('productoComision').value = comisionPct;
   
   const modal = new bootstrap.Modal(document.getElementById('modalProducto'));
   modal.show();
@@ -398,6 +401,9 @@ async function guardarProducto() {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Guardando...';
   }
 
+  const comisionInputVal = parseFloat(document.getElementById('productoComision').value);
+  const comisionDecimal = Number.isFinite(comisionInputVal) ? comisionInputVal / 100 : 0.05;
+
   const datos = {
     nombre: document.getElementById('productoNombre').value,
     precio: parseFloat(document.getElementById('productoPrecio').value),
@@ -406,7 +412,9 @@ async function guardarProducto() {
     descripcion: document.getElementById('productoDescripcion').value,
     imagen: document.getElementById('productoImagen').value || null,
     ciudad_origen: document.getElementById('productoCiudadOrigen').value.trim() || null,
-    tiempo_preparacion: parseInt(document.getElementById('productoTiempoPreparacion').value) || 1
+    tiempo_preparacion: parseInt(document.getElementById('productoTiempoPreparacion').value) || 1,
+    costo_compra: parseFloat(document.getElementById('productoCostoCompra').value) || 0,
+    comision_plataforma: comisionDecimal
   };
 
   try {
@@ -464,6 +472,7 @@ function verProducto(id) {
 // Funciones de pedidos
 async function verPedido(id) {
   try {
+    pedidoActualId = id;
     const res = await fetchAuth(`/pedido/${id}`);
     if (!res.ok) throw new Error('Error al cargar pedido');
     const pedido = await res.json();
@@ -531,6 +540,13 @@ async function verPedido(id) {
     `;
     
     document.getElementById('pedidoDetalles').innerHTML = detallesHtml;
+
+    // Show/hide factura button (available when pedido is confirmed or beyond)
+    const btnFactura = document.getElementById('btnVerFactura');
+    if (btnFactura) {
+      btnFactura.style.display = estadoActual >= 2 ? 'inline-block' : 'none';
+    }
+
     const modal = new bootstrap.Modal(document.getElementById('modalPedido'));
     modal.show();
   } catch (err) {
@@ -827,6 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarPedidos();
 
   document.getElementById('estadisticas-tab')?.addEventListener('shown.bs.tab', () => inicializarGraficos());
+  document.getElementById('inventario-tab')?.addEventListener('shown.bs.tab', () => inicializarInventario());
 });
 
 // Validación de formularios con clases Bootstrap is-invalid
@@ -867,4 +884,256 @@ function validarFormularioProducto() {
   }
   
   return valido;
+}
+
+// ══════════════════════════════════════════════════
+// INVENTARIO — Movimientos, Resumen Financiero, Factura
+// ══════════════════════════════════════════════════
+
+let inventarioCargado = false;
+let pedidoActualId = null;
+
+function inicializarInventario() {
+  if (!inventarioCargado) {
+    poblarSelectProductosEntrada();
+  }
+  cargarResumenFinanciero();
+  cargarMovimientos();
+  inventarioCargado = true;
+}
+
+function poblarSelectProductosEntrada() {
+  const select = document.getElementById('entradaProducto');
+  if (!select) return;
+  const opciones = productosData.map(p =>
+    `<option value="${p.id_producto}">${escapeHtml(p.nombre)} (Stock: ${p.stock ?? 0})</option>`
+  ).join('');
+  select.innerHTML = '<option value="">Selecciona un producto</option>' + opciones;
+}
+
+async function cargarResumenFinanciero() {
+  try {
+    const res = await fetchAuth('/movimiento-inventario/resumen');
+    if (!res.ok) throw new Error('Error al cargar resumen');
+    const data = await res.json();
+
+    const el = (id, val) => {
+      const e = document.getElementById(id);
+      if (e) e.textContent = val;
+    };
+    el('invGananciaNeta', '$' + Number(data.ganancia_neta_total || 0).toFixed(2));
+    el('invTotalVentas', '$' + Number(data.total_ventas || 0).toFixed(2));
+    el('invComisionTotal', '$' + Number(data.comision_total || 0).toFixed(2));
+    el('invTotalInvertido', '$' + Number(data.total_invertido || 0).toFixed(2));
+  } catch (err) {
+    console.error('Error al cargar resumen financiero:', err);
+  }
+}
+
+async function cargarMovimientos() {
+  const tbody = document.getElementById('movimientosTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+
+  try {
+    const tipo = document.getElementById('filtroTipoMov')?.value || '';
+    let url = '/movimiento-inventario/?limit=100';
+    if (tipo) url += '&tipo=' + tipo;
+
+    const res = await fetchAuth(url);
+    if (!res.ok) throw new Error('Error al cargar movimientos');
+    const movimientos = await res.json();
+
+    if (!movimientos || movimientos.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No hay movimientos registrados</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = movimientos.map(m => {
+      const esEntrada = m.tipo_movimiento === 'ENTRADA';
+      const badgeClass = esEntrada ? 'bg-success' : 'bg-danger';
+      const badgeIcon = esEntrada ? 'fa-arrow-down' : 'fa-arrow-up';
+      const fecha = new Date(m.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+      const costoUnit = Number(m.costo_unitario || 0).toFixed(2);
+      const precioVenta = m.precio_venta_unit != null ? ('$' + Number(m.precio_venta_unit).toFixed(2)) : '-';
+      const gananciaNeta = m.ganancia_neta != null ? ('$' + Number(m.ganancia_neta).toFixed(2)) : '-';
+      const ref = m.referencia || '-';
+
+      return `<tr>
+        <td class="small">${fecha}</td>
+        <td><span class="badge ${badgeClass}"><i class="fas ${badgeIcon} me-1"></i>${m.tipo_movimiento}</span></td>
+        <td>${escapeHtml(m.nombre_producto || '')}</td>
+        <td>${m.cantidad}</td>
+        <td>$${costoUnit}</td>
+        <td>${precioVenta}</td>
+        <td>${gananciaNeta}</td>
+        <td class="small">${escapeHtml(ref)}</td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    console.error('Error al cargar movimientos:', err);
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">Error al cargar movimientos</td></tr>';
+  }
+}
+
+async function registrarEntradaInventario() {
+  const idProducto = document.getElementById('entradaProducto').value;
+  const cantidad = document.getElementById('entradaCantidad').value;
+  const costoUnitario = document.getElementById('entradaCostoUnitario').value;
+  const referencia = document.getElementById('entradaReferencia').value;
+  const observaciones = document.getElementById('entradaObservaciones').value;
+
+  if (!idProducto || !cantidad || !costoUnitario) {
+    showToast('Completa producto, cantidad y costo unitario', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btnRegistrarEntrada');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Registrando...';
+
+  try {
+    const res = await fetchAuth('/movimiento-inventario/entrada', {
+      method: 'POST',
+      body: JSON.stringify({
+        id_producto: Number(idProducto),
+        cantidad: Number(cantidad),
+        costo_unitario: Number(costoUnitario),
+        referencia: referencia || null,
+        observaciones: observaciones || null
+      })
+    });
+
+    if (!res.ok) {
+      const err = await safeJson(res);
+      throw new Error(err?.error || 'Error al registrar entrada');
+    }
+
+    showToast('Entrada de inventario registrada correctamente', 'success');
+    document.getElementById('formEntradaInventario').reset();
+    cargarResumenFinanciero();
+    cargarMovimientos();
+    cargarProductos();
+    poblarSelectProductosEntrada();
+  } catch (err) {
+    console.error('Error al registrar entrada:', err);
+    showToast(err.message || 'Error al registrar entrada', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-plus-circle me-1"></i>Registrar Entrada';
+  }
+}
+
+// ── Factura ──
+
+async function verFacturaPedido() {
+  if (!pedidoActualId) return;
+
+  const facturaBody = document.getElementById('facturaContenido');
+  facturaBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div><p class="mt-2 text-muted">Generando factura...</p></div>';
+
+  const modalFactura = new bootstrap.Modal(document.getElementById('modalFactura'));
+  modalFactura.show();
+
+  try {
+    const res = await fetchAuth('/movimiento-inventario/factura/' + pedidoActualId);
+    if (!res.ok) {
+      const err = await safeJson(res);
+      throw new Error(err?.error || 'No se pudo generar la factura');
+    }
+    const data = await res.json();
+
+    const fechaStr = data.pedido.fecha ? new Date(data.pedido.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A';
+
+    let html = `
+      <div style="background: rgba(255,255,255,0.05); border-radius:12px; padding:20px;">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h5 class="mb-1">Factura Vendedor</h5>
+            <p class="text-muted mb-0">Pedido #${data.pedido.id_pedido}</p>
+          </div>
+          <div class="text-end">
+            <p class="mb-0 small text-muted">${fechaStr}</p>
+            <p class="mb-0 small">Cliente: <strong>${escapeHtml(data.pedido.cliente || 'N/A')}</strong></p>
+          </div>
+        </div>
+        <hr style="border-color: rgba(255,255,255,0.2);">
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th class="text-end">Cant.</th>
+                <th class="text-end">Costo Compra</th>
+                <th class="text-end">P. Venta</th>
+                <th class="text-end">Subtotal</th>
+                <th class="text-end">Comisi&oacute;n</th>
+                <th class="text-end">Ganancia Neta</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+    for (const item of data.items) {
+      html += `
+              <tr>
+                <td>${escapeHtml(item.nombre_producto)}</td>
+                <td class="text-end">${item.cantidad}</td>
+                <td class="text-end">$${Number(item.costo_compra || 0).toFixed(2)}</td>
+                <td class="text-end">$${Number(item.precio_venta || 0).toFixed(2)}</td>
+                <td class="text-end">$${Number(item.subtotal_venta || 0).toFixed(2)}</td>
+                <td class="text-end text-warning">-$${Number(item.comision_plataforma || 0).toFixed(2)}</td>
+                <td class="text-end text-success fw-bold">$${Number(item.ganancia_neta || 0).toFixed(2)}</td>
+              </tr>`;
+    }
+
+    html += `
+            </tbody>
+            <tfoot style="border-top: 2px solid rgba(255,255,255,0.3);">
+              <tr>
+                <td colspan="4" class="text-end fw-bold">TOTALES</td>
+                <td class="text-end fw-bold">$${Number(data.totales.total_venta).toFixed(2)}</td>
+                <td class="text-end text-warning fw-bold">-$${Number(data.totales.total_comision).toFixed(2)}</td>
+                <td class="text-end text-success fw-bold">$${Number(data.totales.total_ganancia_neta).toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="row mt-3">
+          <div class="col-md-4">
+            <div class="p-2 rounded" style="background:rgba(40,167,69,0.15);">
+              <small class="text-muted d-block">Ganancia Bruta</small>
+              <strong class="text-success">$${Number(data.totales.total_ganancia_bruta).toFixed(2)}</strong>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-2 rounded" style="background:rgba(255,193,7,0.15);">
+              <small class="text-muted d-block">Comisi&oacute;n Plataforma</small>
+              <strong class="text-warning">-$${Number(data.totales.total_comision).toFixed(2)}</strong>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-2 rounded" style="background:rgba(40,167,69,0.25);">
+              <small class="text-muted d-block">Ganancia Neta Final</small>
+              <strong class="text-success fs-5">$${Number(data.totales.total_ganancia_neta).toFixed(2)}</strong>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    facturaBody.innerHTML = html;
+  } catch (err) {
+    console.error('Error al generar factura:', err);
+    facturaBody.innerHTML = `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function cambiarPassword() {
+  showToast('Funcionalidad de cambiar contrase\u00f1a en desarrollo', 'info');
+}
+function exportarDatos() {
+  showToast('Funcionalidad de exportar datos en desarrollo', 'info');
+}
+function verAyuda() {
+  showToast('Funcionalidad de ayuda en desarrollo', 'info');
 }

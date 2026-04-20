@@ -1,5 +1,6 @@
 const servicio = require("../servicios/Pedido.servicios");
 const EmailService = require("../services/EmailService");
+const movInventarioSvc = require("../servicios/MovimientoInventario.servicios");
 
 exports.obtenerPedidos = async (req, res) => {
   try {
@@ -257,6 +258,20 @@ exports.actualizarPedido = async (req, res) => {
     if (!filas) {
       return res.status(404).json({ error: 'Pedido no encontrado o sin cambios' });
     }
+
+    // Generar movimientos de SALIDA al confirmar pedido (estado 2)
+    if (nuevoEstado === 2) {
+      try {
+        const yaExisten = await movInventarioSvc.existenSalidasParaPedido(req.params.id);
+        if (!yaExisten) {
+          await movInventarioSvc.registrarSalidasPorPedido(Number(req.params.id));
+          console.log('📦 Movimientos SALIDA generados para pedido:', req.params.id);
+        }
+      } catch (movErr) {
+        console.error('⚠️ Error al generar movimientos de inventario (no bloquea):', movErr.message);
+      }
+    }
+
     res.json({ message: 'Pedido actualizado', filas });
   } catch (err) {
     console.error('❌ Error al actualizar pedido:', err.message);

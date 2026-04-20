@@ -101,7 +101,9 @@ async function buscarPorId(id) {
       p.id_categoria,
       p.imagen,
       ${includeCiudad ? 'p.ciudad_origen,' : ''}
-      p.id_vendedor
+      p.id_vendedor,
+      p.costo_compra,
+      p.comision_plataforma
     FROM producto p
     WHERE p.id_producto = ?
     `,
@@ -139,16 +141,18 @@ async function masVendidosPorCategoria(idCategoria, limit = 6) {
 
 
 async function crearProducto(datos, idVendedor) {
-  const { id_categoria, nombre, descripcion, precio, stock, imagen, ciudad_origen } = datos;
+  const { id_categoria, nombre, descripcion, precio, stock, imagen, ciudad_origen, costo_compra, comision_plataforma } = datos;
   const includeCiudad = await hasCiudadOrigen();
+  const costoVal = (costo_compra != null && costo_compra !== '') ? Number(costo_compra) : 0;
+  const comisionVal = (comision_plataforma != null && comision_plataforma !== '') ? Number(comision_plataforma) : 0.05;
   const sql = includeCiudad
-    ? `INSERT INTO producto (id_categoria, nombre, descripcion, precio, stock, imagen, ciudad_origen, id_vendedor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    : `INSERT INTO producto (id_categoria, nombre, descripcion, precio, stock, imagen, id_vendedor) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    ? `INSERT INTO producto (id_categoria, nombre, descripcion, precio, stock, imagen, ciudad_origen, id_vendedor, costo_compra, comision_plataforma) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    : `INSERT INTO producto (id_categoria, nombre, descripcion, precio, stock, imagen, id_vendedor, costo_compra, comision_plataforma) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   try {
     const imagenNormalizada = normalizarImagen(imagen);
     const values = includeCiudad
-      ? [id_categoria, nombre, descripcion, precio, stock, imagenNormalizada, ciudad_origen || null, idVendedor || null]
-      : [id_categoria, nombre, descripcion, precio, stock, imagenNormalizada, idVendedor || null];
+      ? [id_categoria, nombre, descripcion, precio, stock, imagenNormalizada, ciudad_origen || null, idVendedor || null, costoVal, comisionVal]
+      : [id_categoria, nombre, descripcion, precio, stock, imagenNormalizada, idVendedor || null, costoVal, comisionVal];
     const [result] = await db.execute(sql, values);
     return result.insertId;
   } catch (error) {
@@ -185,16 +189,24 @@ async function actualizar(id, producto) {
   try {
     const includeCiudad = await hasCiudadOrigen();
     const imagenNormalizada = normalizarImagen(producto.imagen);
-    const sql = includeCiudad
-      ? `UPDATE producto
-       SET nombre = ?, precio = ?, stock = ?, id_categoria = ?, imagen = ?, ciudad_origen = ?
-       WHERE id_producto = ?`
-      : `UPDATE producto
-       SET nombre = ?, precio = ?, stock = ?, id_categoria = ?, imagen = ?
-       WHERE id_producto = ?`;
-    const values = includeCiudad
-      ? [producto.nombre, producto.precio, producto.stock, producto.id_categoria, imagenNormalizada, producto.ciudad_origen || null, id]
-      : [producto.nombre, producto.precio, producto.stock, producto.id_categoria, imagenNormalizada, id];
+    const costoVal = (producto.costo_compra != null && producto.costo_compra !== '') ? Number(producto.costo_compra) : undefined;
+    const comisionVal = (producto.comision_plataforma != null && producto.comision_plataforma !== '') ? Number(producto.comision_plataforma) : undefined;
+    let setClauses = 'nombre = ?, precio = ?, stock = ?, id_categoria = ?, imagen = ?';
+    let values = [producto.nombre, producto.precio, producto.stock, producto.id_categoria, imagenNormalizada];
+    if (includeCiudad) {
+      setClauses += ', ciudad_origen = ?';
+      values.push(producto.ciudad_origen || null);
+    }
+    if (costoVal !== undefined) {
+      setClauses += ', costo_compra = ?';
+      values.push(costoVal);
+    }
+    if (comisionVal !== undefined) {
+      setClauses += ', comision_plataforma = ?';
+      values.push(comisionVal);
+    }
+    values.push(id);
+    const sql = `UPDATE producto SET ${setClauses} WHERE id_producto = ?`;
     const [result] = await db.execute(sql, values);
     return result.affectedRows;
   } catch (error) {
