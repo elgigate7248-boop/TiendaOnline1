@@ -11,6 +11,7 @@ async function listar() {
       d.precio_unitario
     FROM detalle_pedido d
     JOIN producto p ON d.id_producto = p.id_producto
+    ORDER BY d.id_pedido DESC, d.id_detalle ASC
   `);
   return rows;
 }

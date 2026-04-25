@@ -10,6 +10,7 @@ async function listar() {
       p.monto,
       p.fecha_pago
     FROM pago p
+    ORDER BY p.fecha_pago DESC
   `);
   return rows;
 }
