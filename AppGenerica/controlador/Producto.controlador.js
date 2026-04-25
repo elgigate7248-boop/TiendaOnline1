@@ -86,11 +86,45 @@ async function obtenerMasVendidosPorCategoria(req, res) {
   }
 };
 
+async function actualizarProducto(req, res) {
+  try {
+    const producto = await servicio.buscarPorId(req.params.id);
+    if (!producto) return res.status(404).json({ message: 'Producto no encontrado' });
+    const roles = Array.isArray(req.usuario.roles) ? req.usuario.roles : [];
+    const esAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN');
+    if (!esAdmin && producto.id_vendedor !== req.usuario.id_usuario) {
+      return res.status(403).json({ message: 'No puedes editar este producto' });
+    }
+    const filas = await servicio.actualizar(req.params.id, req.body);
+    res.json({ message: 'Producto actualizado', filas });
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message || 'Error al actualizar producto' });
+  }
+}
+
+async function eliminarProducto(req, res) {
+  try {
+    const producto = await servicio.buscarPorId(req.params.id);
+    if (!producto) return res.status(404).json({ message: 'Producto no encontrado' });
+    const roles = Array.isArray(req.usuario.roles) ? req.usuario.roles : [];
+    const esAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN');
+    if (!esAdmin && producto.id_vendedor !== req.usuario.id_usuario) {
+      return res.status(403).json({ message: 'No puedes eliminar este producto' });
+    }
+    const filas = await servicio.eliminar(req.params.id);
+    res.json({ message: 'Producto eliminado', filas });
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message || 'Error al eliminar producto' });
+  }
+}
+
 module.exports = {
   obtenerProductos,
   obtenerProductosGestion,
   obtenerProducto,
   crearProducto,
+  actualizarProducto,
+  eliminarProducto,
   obtenerAtributos,
   guardarAtributos,
   obtenerMasVendidosPorCategoria

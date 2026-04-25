@@ -48,7 +48,7 @@ async function eliminarCategoria(req, res) {
     res.json({ message: 'Categoría eliminada correctamente' });
   } catch (err) {
     console.error('❌ Error al eliminar categoría:', err.message);
-    res.status(500).json({ error: 'Error al eliminar categoría' });
+    res.status(err.status || 500).json({ error: err.message || 'Error al eliminar categoría' });
   }
 }
 

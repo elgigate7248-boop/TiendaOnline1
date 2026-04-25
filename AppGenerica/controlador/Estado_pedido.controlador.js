@@ -40,6 +40,6 @@ exports.eliminarEstado = async (req, res) => {
     await servicio.eliminar(req.params.id);
     res.json({ message: 'Estado eliminado' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al eliminar estado' });
+    res.status(err.status || 500).json({ error: err.message || 'Error al eliminar estado' });
   }
 };

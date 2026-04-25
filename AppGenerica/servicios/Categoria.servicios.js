@@ -37,6 +37,15 @@ async function actualizar(id, categoria) {
 }
 
 async function eliminar(id) {
+  const [[uso]] = await db.execute(
+    "SELECT COUNT(*) AS total FROM producto WHERE id_categoria = ?",
+    [id]
+  );
+  if (Number(uso?.total || 0) > 0) {
+    const err = new Error('No se puede eliminar la categoría porque tiene productos asociados.');
+    err.status = 409;
+    throw err;
+  }
   const [result] = await db.execute(
     "DELETE FROM categoria WHERE id_categoria = ?",
     [id]

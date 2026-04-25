@@ -28,6 +28,15 @@ async function actualizar(id, estado) {
 }
 
 async function eliminar(id) {
+  const [[uso]] = await db.execute(
+    "SELECT COUNT(*) AS total FROM pedido WHERE id_estado = ?",
+    [id]
+  );
+  if (Number(uso?.total || 0) > 0) {
+    const err = new Error('No se puede eliminar el estado porque hay pedidos que lo utilizan.');
+    err.status = 409;
+    throw err;
+  }
   const [result] = await db.execute(
     "DELETE FROM estado_pedido WHERE id_estado = ?",
     [id]
