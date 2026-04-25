@@ -1,6 +1,8 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+const BASE_URL = process.env.FRONTEND_URL || 'http://localhost:5000/frontend-html';
+
 class EmailService {
   constructor() {
     // Verificar si hay credenciales de email configuradas
@@ -69,6 +71,10 @@ class EmailService {
   }
 
   async sendPaymentConfirmation(orderData) {
+    if (!this.transporter) {
+      console.log('📧 Email desactivado - Pago confirmación no enviado');
+      return { success: false, error: 'Email service desactivado' };
+    }
     try {
       const { pedido, cliente, paymentMethod } = orderData;
       
@@ -90,6 +96,10 @@ class EmailService {
   }
 
   async sendShippingNotification(orderData) {
+    if (!this.transporter) {
+      console.log('📧 Email desactivado - Notificación de envío no enviada');
+      return { success: false, error: 'Email service desactivado' };
+    }
     try {
       const { pedido, cliente, trackingInfo } = orderData;
       
@@ -111,6 +121,10 @@ class EmailService {
   }
 
   async sendOrderDelivered(orderData) {
+    if (!this.transporter) {
+      console.log('📧 Email desactivado - Entrega no notificada');
+      return { success: false, error: 'Email service desactivado' };
+    }
     try {
       const { pedido, cliente } = orderData;
       
@@ -132,6 +146,10 @@ class EmailService {
   }
 
   async sendOrderCancelled(orderData) {
+    if (!this.transporter) {
+      console.log('📧 Email desactivado - Cancelación no notificada');
+      return { success: false, error: 'Email service desactivado' };
+    }
     try {
       const { pedido, cliente, motivo } = orderData;
       
@@ -153,6 +171,10 @@ class EmailService {
   }
 
   async sendWelcomeEmail(userData) {
+    if (!this.transporter) {
+      console.log('📧 Email desactivado - Bienvenida no enviada');
+      return { success: false, error: 'Email service desactivado' };
+    }
     try {
       const { nombre, email } = userData;
       
@@ -174,6 +196,10 @@ class EmailService {
   }
 
   async sendPasswordReset(userData) {
+    if (!this.transporter) {
+      console.log('📧 Email desactivado - Reset de contraseña no enviado');
+      return { success: false, error: 'Email service desactivado' };
+    }
     try {
       const { nombre, email, resetToken } = userData;
       
@@ -195,6 +221,10 @@ class EmailService {
   }
 
   async sendPromoEmail(promoData) {
+    if (!this.transporter) {
+      console.log('📧 Email desactivado - Campaña promocional no enviada');
+      return { success: false, error: 'Email service desactivado' };
+    }
     try {
       const { clientes, promo, asunto, contenido } = promoData;
       
@@ -236,11 +266,14 @@ class EmailService {
       const batchResults = await Promise.allSettled(batchPromises);
       
       batchResults.forEach(result => {
-        if (result.status === 'fulfilled' && result.value.success) {
+        if (result.status === 'fulfilled' && result.value && result.value.success) {
           results.success++;
         } else {
           results.failed++;
-          results.errors.push(result.reason?.error || 'Error desconocido');
+          const errMsg = result.status === 'fulfilled'
+            ? (result.value?.error || 'Error desconocido')
+            : (result.reason?.message || 'Error desconocido');
+          results.errors.push(errMsg);
         }
       });
       
@@ -313,7 +346,7 @@ class EmailService {
             </div>
             
             <div style="text-align: center;">
-                <a href="http://localhost:5000/frontend-html/mis-pedidos.html" class="btn">
+                <a href="${BASE_URL}/mis-pedidos.html" class="btn">
                     Ver Mis Pedidos
                 </a>
             </div>
@@ -327,7 +360,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-            <p>© 2025 Tienda Online - Todos los derechos reservados</p>
+            <p>© 2026 Tienda Online - Todos los derechos reservados</p>
             <p>Este email fue enviado a ${cliente.email}</p>
         </div>
     </div>
@@ -381,7 +414,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-            <p>© 2025 Tienda Online - Todos los derechos reservados</p>
+            <p>© 2026 Tienda Online - Todos los derechos reservados</p>
         </div>
     </div>
 </body>
@@ -439,7 +472,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-            <p>© 2025 Tienda Online - Todos los derechos reservados</p>
+            <p>© 2026 Tienda Online - Todos los derechos reservados</p>
         </div>
     </div>
 </body>
@@ -489,7 +522,7 @@ class EmailService {
             </ul>
             
             <div style="text-align: center;">
-                <a href="http://localhost:5000/frontend-html/index.html" class="btn">
+                <a href="${BASE_URL}/index.html" class="btn">
                     Comprar Nuevamente
                 </a>
                 <a href="#" class="btn">
@@ -501,7 +534,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-            <p>© 2025 Tienda Online - Todos los derechos reservados</p>
+            <p>© 2026 Tienda Online - Todos los derechos reservados</p>
         </div>
     </div>
 </body>
@@ -559,7 +592,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-            <p>© 2025 Tienda Online - Todos los derechos reservados</p>
+            <p>© 2026 Tienda Online - Todos los derechos reservados</p>
         </div>
     </div>
 </body>
@@ -606,7 +639,7 @@ class EmailService {
             </div>
             
             <div style="text-align: center;">
-                <a href="http://localhost:5000/frontend-html/index.html" class="btn">
+                <a href="${BASE_URL}/index.html" class="btn">
                     Explorar Catálogo
                 </a>
             </div>
@@ -623,7 +656,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-            <p>© 2025 Tienda Online - Todos los derechos reservados</p>
+            <p>© 2026 Tienda Online - Todos los derechos reservados</p>
         </div>
     </div>
 </body>
@@ -661,7 +694,7 @@ class EmailService {
             <div class="reset-info">
                 <h3>🔑 Crear Nueva Contraseña</h3>
                 <p>Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
-                <a href="http://localhost:5000/frontend-html/reset-password.html?token=${resetToken}&email=${email}" class="btn">
+                <a href="${BASE_URL}/reset-password.html?token=${resetToken}&email=${email}" class="btn">
                     Restablecer Contraseña
                 </a>
                 <p><small>Este enlace expirará en 1 hora por seguridad.</small></p>
@@ -679,7 +712,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-            <p>© 2025 Tienda Online - Todos los derechos reservados</p>
+            <p>© 2026 Tienda Online - Todos los derechos reservados</p>
         </div>
     </div>
 </body>
@@ -722,7 +755,7 @@ class EmailService {
             </div>
             
             <div style="text-align: center;">
-                <a href="http://localhost:5000/frontend-html/index.html?promo=${promo.codigo}" class="btn">
+                <a href="${BASE_URL}/index.html?promo=${promo.codigo}" class="btn">
                     ¡Aprovechar Oferta!
                 </a>
             </div>
@@ -737,7 +770,7 @@ class EmailService {
         </div>
         
         <div class="footer">
-            <p>© 2025 Tienda Online - Todos los derechos reservados</p>
+            <p>© 2026 Tienda Online - Todos los derechos reservados</p>
             <p>Si no deseas recibir estos emails, <a href="#">haz clic aquí para darte de baja</a></p>
         </div>
     </div>
