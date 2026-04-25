@@ -1,4 +1,5 @@
 const express = require("express");
+require("express-async-errors");
 const cors = require("cors");
 const path = require("path");
 const { securityHeaders, createRateLimiter } = require("./middlewares/security");
@@ -6,6 +7,15 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'supersecreto') {
+  console.warn('\n⚠️  ADVERTENCIA: JWT_SECRET no configurado o es el valor por defecto.');
+  console.warn('   Configura una clave segura en las variables de entorno para producción.\n');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ JWT_SECRET inseguro en producción. Abortando.');
+    process.exit(1);
+  }
+}
 
 const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
@@ -17,15 +27,15 @@ app.use(cors(
   (isProduction && allowedOrigins.length)
     ? {
         origin: (origin, callback) => {
-          // Allow non-browser requests (no Origin header) and configured origins.
           if (!origin || allowedOrigins.includes(origin)) {
             return callback(null, true);
           }
           return callback(new Error('Origen no permitido por CORS'));
-        }
+        },
+        credentials: true
       }
-    : {}
-)); // En desarrollo se permiten orígenes sin restricción.
+    : { credentials: true }
+));
 
 app.use(securityHeaders);
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '3mb' }));
@@ -121,6 +131,14 @@ app.use((req, res) => {
     error: "Ruta no encontrada",
     method: req.method,
     path: req.path
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error('❌ Error no manejado:', err.message || err);
+  const status = err.status || 500;
+  res.status(status).json({
+    error: isProduction ? 'Error interno del servidor' : (err.message || 'Error interno del servidor')
   });
 });
 
