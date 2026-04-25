@@ -2,15 +2,14 @@ const express = require("express");
 const router = express.Router();
 
 const controlador = require("../controlador/Resena.controlador");
-const autenticacion = require("../middlewares/Autenticacion");
-const autorizarRol = require("../middlewares/AutorizarRol");
+const { verificarToken, requiereRol } = require("../middlewares/auth");
 
 router.get("/producto/:idProducto", controlador.obtenerResenasPorProducto);
 
 router.post(
   "/producto/:idProducto",
-  autenticacion,
-  autorizarRol(["CLIENTE"]),
+  verificarToken,
+  requiereRol(["CLIENTE"]),
   controlador.crearResena
 );
 

@@ -259,8 +259,21 @@ exports.actualizarPedido = async (req, res) => {
       return res.status(404).json({ error: 'Pedido no encontrado o sin cambios' });
     }
 
-    // Generar movimientos de SALIDA al confirmar pedido (estado 2)
+    // Al confirmar pedido (estado 2): descontar stock + registrar movimientos SALIDA
     if (nuevoEstado === 2) {
+      // Descontar stock (crítico — si falla, el pedido no debe confirmarse)
+      try {
+        await servicio.descontarStockPorConfirmacion(Number(req.params.id));
+        console.log('📦 Stock descontado por confirmación del pedido:', req.params.id);
+      } catch (stockErr) {
+        // Revertir el estado del pedido si no hay stock suficiente
+        await servicio.actualizar(req.params.id, { id_estado: pedido.id_estado });
+        return res.status(stockErr.status || 500).json({
+          error: stockErr.message || 'Error al descontar stock al confirmar pedido'
+        });
+      }
+
+      // Registrar movimientos de inventario SALIDA
       try {
         const yaExisten = await movInventarioSvc.existenSalidasParaPedido(req.params.id);
         if (!yaExisten) {
@@ -269,6 +282,16 @@ exports.actualizarPedido = async (req, res) => {
         }
       } catch (movErr) {
         console.error('⚠️ Error al generar movimientos de inventario (no bloquea):', movErr.message);
+      }
+    }
+
+    // Restaurar stock al cancelar pedido (estado 6)
+    if (nuevoEstado === 6) {
+      try {
+        await servicio.restaurarStockPorCancelacion(Number(req.params.id));
+        console.log('🔄 Stock restaurado por cancelación del pedido:', req.params.id);
+      } catch (stockErr) {
+        console.error('⚠️ Error al restaurar stock por cancelación (no bloquea):', stockErr.message);
       }
     }
 
