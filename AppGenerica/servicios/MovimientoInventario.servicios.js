@@ -285,10 +285,11 @@ async function listarPorVendedor(idVendedor, filtros = {}) {
   if (limit) {
     const lim = Math.max(1, Math.min(Number(limit) || 50, 500));
     const off = Math.max(0, Number(offset) || 0);
-    query += ` LIMIT ${lim} OFFSET ${off}`;
+    query += ' LIMIT ? OFFSET ?';
+    params.push(lim, off);
   }
 
-  const [rows] = await db.execute(query, params);
+  const [rows] = await db.query(query, params);
   return rows;
 }
 

@@ -116,7 +116,7 @@ async function buscarPorId(id) {
 async function masVendidosPorCategoria(idCategoria, limit = 6) {
   const top = Math.max(1, Math.min(Number(limit) || 6, 24));
   const includeCiudad = await hasCiudadOrigen();
-  const [rows] = await db.execute(
+  const [rows] = await db.query(
     `
     SELECT
       p.id_producto,
@@ -132,9 +132,9 @@ async function masVendidosPorCategoria(idCategoria, limit = 6) {
     WHERE p.id_categoria = ?
     GROUP BY p.id_producto
     ORDER BY vendidos DESC, p.id_producto DESC
-    LIMIT ${top}
+    LIMIT ?
     `,
-    [idCategoria]
+    [idCategoria, top]
   );
   return rows;
 }
@@ -290,18 +290,24 @@ async function eliminarAtributo(idAtributo) {
 }
 
 async function reemplazarAtributos(idProducto, atributos) {
-  await db.execute('START TRANSACTION');
+  const conn = await db.getConnection();
   try {
-    await db.execute('DELETE FROM producto_atributo WHERE id_producto = ?', [idProducto]);
+    await conn.beginTransaction();
+    await conn.execute('DELETE FROM producto_atributo WHERE id_producto = ?', [idProducto]);
     if (Array.isArray(atributos) && atributos.length) {
-      const values = atributos.map(a => [idProducto, a.seccion, a.atributo, a.valor]);
-      const sql = `INSERT INTO producto_atributo (id_producto, seccion, atributo, valor) VALUES ?`;
-      await db.execute(sql, [values]);
+      for (const a of atributos) {
+        await conn.execute(
+          'INSERT INTO producto_atributo (id_producto, seccion, atributo, valor) VALUES (?, ?, ?, ?)',
+          [idProducto, a.seccion, a.atributo, a.valor]
+        );
+      }
     }
-    await db.execute('COMMIT');
+    await conn.commit();
   } catch (e) {
-    await db.execute('ROLLBACK');
+    await conn.rollback();
     throw e;
+  } finally {
+    conn.release();
   }
 }
 

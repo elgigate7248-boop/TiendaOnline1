@@ -13,6 +13,7 @@ async function listar() {
     FROM pedido p
     JOIN usuario u ON p.id_usuario = u.id_usuario
     JOIN estado_pedido e ON p.id_estado = e.id_estado
+    ORDER BY p.fecha_pedido DESC
   `);
   return rows;
 }
@@ -113,6 +114,18 @@ async function insertar(pedido) {
           throw invalidDetailError;
         }
 
+        // Validar stock disponible (sin descontar — se descuenta al confirmar)
+        const [[prodStock]] = await connection.execute(
+          `SELECT stock FROM producto WHERE id_producto = ?`,
+          [detalle.id_producto]
+        );
+
+        if (!prodStock || prodStock.stock < cantidad) {
+          const stockError = new Error(`Stock insuficiente para el producto ${detalle.id_producto}`);
+          stockError.status = 400;
+          throw stockError;
+        }
+
         await connection.execute(
           `INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario)
            VALUES (?, ?, ?, ?)`,
@@ -123,17 +136,6 @@ async function insertar(pedido) {
             precioUnitario
           ]
         );
-
-        const [stockUpdate] = await connection.execute(
-          `UPDATE producto SET stock = stock - ? WHERE id_producto = ? AND stock >= ?`,
-          [cantidad, detalle.id_producto, cantidad]
-        );
-
-        if (!stockUpdate.affectedRows) {
-          const stockError = new Error(`Stock insuficiente para el producto ${detalle.id_producto}`);
-          stockError.status = 400;
-          throw stockError;
-        }
       }
     }
 
@@ -281,24 +283,34 @@ async function eliminar(id) {
   try {
     await connection.beginTransaction();
 
-    const [detalles] = await connection.execute(
-      `SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?`,
+    // Solo restaurar stock si el pedido fue confirmado (existen movimientos SALIDA)
+    const [[movSalida]] = await connection.execute(
+      `SELECT COUNT(*) AS total FROM movimiento_inventario WHERE id_pedido = ? AND tipo_movimiento = 'SALIDA'`,
       [idPedido]
     );
+    const fueConfirmado = movSalida && Number(movSalida.total) > 0;
 
-    if (Array.isArray(detalles) && detalles.length) {
-      for (const d of detalles) {
-        const cantidad = Number(d.cantidad) || 0;
-        const idProducto = Number(d.id_producto) || 0;
-        if (cantidad > 0 && idProducto > 0) {
-          await connection.execute(
-            `UPDATE producto SET stock = stock + ? WHERE id_producto = ?`,
-            [cantidad, idProducto]
-          );
+    if (fueConfirmado) {
+      const [detalles] = await connection.execute(
+        `SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?`,
+        [idPedido]
+      );
+
+      if (Array.isArray(detalles) && detalles.length) {
+        for (const d of detalles) {
+          const cantidad = Number(d.cantidad) || 0;
+          const idProducto = Number(d.id_producto) || 0;
+          if (cantidad > 0 && idProducto > 0) {
+            await connection.execute(
+              `UPDATE producto SET stock = stock + ? WHERE id_producto = ?`,
+              [cantidad, idProducto]
+            );
+          }
         }
       }
     }
 
+    await connection.execute(`DELETE FROM movimiento_inventario WHERE id_pedido = ?`, [idPedido]);
     await connection.execute(`DELETE FROM pago WHERE id_pedido = ?`, [idPedido]);
     await connection.execute(`DELETE FROM detalle_pedido WHERE id_pedido = ?`, [idPedido]);
     const [result] = await connection.execute(`DELETE FROM pedido WHERE id_pedido = ?`, [idPedido]);
@@ -360,7 +372,7 @@ async function obtenerResumenReportes(top = 5) {
     `
   );
 
-  const [topProductos] = await db.execute(
+  const [topProductos] = await db.query(
     `
     SELECT
       pr.id_producto,
@@ -371,8 +383,9 @@ async function obtenerResumenReportes(top = 5) {
     LEFT JOIN detalle_pedido dp ON dp.id_producto = pr.id_producto
     GROUP BY pr.id_producto, pr.nombre
     ORDER BY unidades DESC, ingresos DESC
-    LIMIT ${topLimit}
-    `
+    LIMIT ?
+    `,
+    [topLimit]
   );
 
   const [ventasMensualesRaw] = await db.execute(
@@ -398,6 +411,96 @@ async function obtenerResumenReportes(top = 5) {
   };
 }
 
+async function descontarStockPorConfirmacion(idPedido) {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [detalles] = await connection.execute(
+      `SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?`,
+      [idPedido]
+    );
+
+    if (Array.isArray(detalles) && detalles.length) {
+      for (const d of detalles) {
+        const cantidad = Number(d.cantidad) || 0;
+        const idProducto = Number(d.id_producto) || 0;
+        if (cantidad > 0 && idProducto > 0) {
+          const [stockUpdate] = await connection.execute(
+            `UPDATE producto SET stock = stock - ? WHERE id_producto = ? AND stock >= ?`,
+            [cantidad, idProducto, cantidad]
+          );
+          if (!stockUpdate.affectedRows) {
+            const err = new Error(`Stock insuficiente para producto ${idProducto} al confirmar pedido`);
+            err.status = 400;
+            throw err;
+          }
+        }
+      }
+    }
+
+    await connection.commit();
+    return true;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function restaurarStockPorCancelacion(idPedido) {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Solo restaurar stock si el pedido ya fue confirmado (estado >= 2)
+    const [[pedidoInfo]] = await connection.execute(
+      `SELECT id_estado FROM pedido WHERE id_pedido = ?`,
+      [idPedido]
+    );
+    // El pedido ya cambió a estado 6 (cancelado) en este punto,
+    // pero el stock solo se descontó si pasó por confirmación.
+    // Verificamos si existen movimientos de inventario SALIDA para este pedido
+    const [[movSalida]] = await connection.execute(
+      `SELECT COUNT(*) AS total FROM movimiento_inventario WHERE id_pedido = ? AND tipo_movimiento = 'SALIDA'`,
+      [idPedido]
+    );
+
+    // Si no hay movimientos de salida, el stock nunca se descontó — no restaurar
+    if (!movSalida || Number(movSalida.total) === 0) {
+      await connection.commit();
+      return false;
+    }
+
+    const [detalles] = await connection.execute(
+      `SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?`,
+      [idPedido]
+    );
+
+    if (Array.isArray(detalles) && detalles.length) {
+      for (const d of detalles) {
+        const cantidad = Number(d.cantidad) || 0;
+        const idProducto = Number(d.id_producto) || 0;
+        if (cantidad > 0 && idProducto > 0) {
+          await connection.execute(
+            `UPDATE producto SET stock = stock + ? WHERE id_producto = ?`,
+            [cantidad, idProducto]
+          );
+        }
+      }
+    }
+
+    await connection.commit();
+    return true;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 module.exports = {
   listar,
   listarPorUsuario,
@@ -408,5 +511,7 @@ module.exports = {
   buscarPorId,
   actualizar,
   eliminar,
+  descontarStockPorConfirmacion,
+  restaurarStockPorCancelacion,
   obtenerResumenReportes
 };
