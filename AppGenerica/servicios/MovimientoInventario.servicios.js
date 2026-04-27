@@ -320,7 +320,7 @@ async function resumenFinanciero(idVendedor, filtros = {}) {
       COALESCE(SUM(CASE WHEN tipo_movimiento = 'SALIDA' THEN cantidad ELSE 0 END), 0)
         AS unidades_vendidas,
       COALESCE(SUM(CASE WHEN tipo_movimiento = 'ENTRADA' THEN costo_unitario * cantidad ELSE 0 END), 0)
-        AS total_invertido,
+        AS total_invertido_movimientos,
       COALESCE(SUM(CASE WHEN tipo_movimiento = 'SALIDA' THEN precio_venta_unit * cantidad ELSE 0 END), 0)
         AS total_ventas,
       COALESCE(SUM(CASE WHEN tipo_movimiento = 'SALIDA' THEN ganancia_bruta ELSE 0 END), 0)
@@ -333,6 +333,18 @@ async function resumenFinanciero(idVendedor, filtros = {}) {
     WHERE m.id_vendedor = ?
     ${whereExtra}
   `, params);
+
+  // Calcular total invertido desde los productos del vendedor (costo_compra * stock)
+  const [[invProductos]] = await db.execute(`
+    SELECT COALESCE(SUM(costo_compra * stock), 0) AS total_invertido_productos
+    FROM producto
+    WHERE id_vendedor = ? AND costo_compra > 0
+  `, [idVendedor]);
+
+  // Usar el mayor entre movimientos de entrada y el valor actual del inventario
+  const invertidoMovimientos = Number(resumen.total_invertido_movimientos) || 0;
+  const invertidoProductos = Number(invProductos.total_invertido_productos) || 0;
+  resumen.total_invertido = invertidoMovimientos > 0 ? invertidoMovimientos : invertidoProductos;
 
   return resumen;
 }
