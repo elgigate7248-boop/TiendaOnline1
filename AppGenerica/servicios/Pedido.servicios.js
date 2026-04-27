@@ -284,28 +284,36 @@ async function eliminar(id) {
     await connection.beginTransaction();
 
     // Solo restaurar stock si el pedido fue confirmado (existen movimientos SALIDA)
-    const [[movSalida]] = await connection.execute(
-      `SELECT COUNT(*) AS total FROM movimiento_inventario WHERE id_pedido = ? AND tipo_movimiento = 'SALIDA'`,
+    const [salidas] = await connection.execute(
+      `SELECT id_movimiento, id_producto, cantidad, observaciones
+       FROM movimiento_inventario
+       WHERE id_pedido = ? AND tipo_movimiento = 'SALIDA'`,
       [idPedido]
     );
-    const fueConfirmado = movSalida && Number(movSalida.total) > 0;
 
-    if (fueConfirmado) {
-      const [detalles] = await connection.execute(
-        `SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?`,
-        [idPedido]
-      );
+    if (salidas && salidas.length > 0) {
+      for (const salida of salidas) {
+        const cantidad = Number(salida.cantidad) || 0;
+        const idProducto = Number(salida.id_producto) || 0;
+        if (cantidad <= 0 || idProducto <= 0) continue;
 
-      if (Array.isArray(detalles) && detalles.length) {
-        for (const d of detalles) {
-          const cantidad = Number(d.cantidad) || 0;
-          const idProducto = Number(d.id_producto) || 0;
-          if (cantidad > 0 && idProducto > 0) {
-            await connection.execute(
-              `UPDATE producto SET stock = stock + ? WHERE id_producto = ?`,
-              [cantidad, idProducto]
-            );
-          }
+        // Restaurar stock
+        await connection.execute(
+          `UPDATE producto SET stock = stock + ? WHERE id_producto = ?`,
+          [cantidad, idProducto]
+        );
+
+        // Revertir lote FIFO si aplica
+        const obs = salida.observaciones || '';
+        const matchLote = obs.match(/FIFO lote #(\d+)/);
+        if (matchLote) {
+          const idLoteOriginal = Number(matchLote[1]);
+          await connection.execute(
+            `UPDATE movimiento_inventario
+             SET cantidad_restante = cantidad_restante + ?
+             WHERE id_movimiento = ? AND tipo_movimiento = 'ENTRADA'`,
+            [cantidad, idLoteOriginal]
+          );
         }
       }
     }
@@ -454,13 +462,6 @@ async function restaurarStockPorCancelacion(idPedido) {
   try {
     await connection.beginTransaction();
 
-    // Solo restaurar stock si el pedido ya fue confirmado (estado >= 2)
-    const [[pedidoInfo]] = await connection.execute(
-      `SELECT id_estado FROM pedido WHERE id_pedido = ?`,
-      [idPedido]
-    );
-    // El pedido ya cambió a estado 6 (cancelado) en este punto,
-    // pero el stock solo se descontó si pasó por confirmación.
     // Verificamos si existen movimientos de inventario SALIDA para este pedido
     const [[movSalida]] = await connection.execute(
       `SELECT COUNT(*) AS total FROM movimiento_inventario WHERE id_pedido = ? AND tipo_movimiento = 'SALIDA'`,
@@ -473,23 +474,44 @@ async function restaurarStockPorCancelacion(idPedido) {
       return false;
     }
 
-    const [detalles] = await connection.execute(
-      `SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?`,
+    // Obtener movimientos SALIDA de este pedido para revertir lotes FIFO
+    const [salidas] = await connection.execute(
+      `SELECT id_movimiento, id_producto, cantidad, costo_unitario, observaciones
+       FROM movimiento_inventario
+       WHERE id_pedido = ? AND tipo_movimiento = 'SALIDA'`,
       [idPedido]
     );
 
-    if (Array.isArray(detalles) && detalles.length) {
-      for (const d of detalles) {
-        const cantidad = Number(d.cantidad) || 0;
-        const idProducto = Number(d.id_producto) || 0;
-        if (cantidad > 0 && idProducto > 0) {
-          await connection.execute(
-            `UPDATE producto SET stock = stock + ? WHERE id_producto = ?`,
-            [cantidad, idProducto]
-          );
-        }
+    for (const salida of salidas) {
+      const cantidad = Number(salida.cantidad) || 0;
+      const idProducto = Number(salida.id_producto) || 0;
+      if (cantidad <= 0 || idProducto <= 0) continue;
+
+      // Restaurar stock del producto
+      await connection.execute(
+        `UPDATE producto SET stock = stock + ? WHERE id_producto = ?`,
+        [cantidad, idProducto]
+      );
+
+      // Revertir cantidad_restante del lote FIFO original (si existe en observaciones)
+      const obs = salida.observaciones || '';
+      const matchLote = obs.match(/FIFO lote #(\d+)/);
+      if (matchLote) {
+        const idLoteOriginal = Number(matchLote[1]);
+        await connection.execute(
+          `UPDATE movimiento_inventario
+           SET cantidad_restante = cantidad_restante + ?
+           WHERE id_movimiento = ? AND tipo_movimiento = 'ENTRADA'`,
+          [cantidad, idLoteOriginal]
+        );
       }
     }
+
+    // Eliminar los movimientos SALIDA de este pedido (ya están revertidos)
+    await connection.execute(
+      `DELETE FROM movimiento_inventario WHERE id_pedido = ? AND tipo_movimiento = 'SALIDA'`,
+      [idPedido]
+    );
 
     await connection.commit();
     return true;

@@ -32,7 +32,8 @@ async function obtenerCostosProducto(idProducto, conn) {
 
 /**
  * Registra una entrada de inventario (compra o producción).
- * Actualiza el stock y el costo_compra del producto.
+ * Crea un lote FIFO con cantidad_restante para trazabilidad.
+ * Solo actualiza el stock del producto (NO sobreescribe costo_compra global).
  *
  * @param {Object} datos
  * @param {number} datos.id_producto
@@ -41,7 +42,7 @@ async function obtenerCostosProducto(idProducto, conn) {
  * @param {number} datos.costo_unitario - Costo de compra/producción por unidad
  * @param {string} [datos.referencia]
  * @param {string} [datos.observaciones]
- * @returns {Object} { id_movimiento, nuevo_stock, nuevo_costo_compra }
+ * @returns {Object} { id_movimiento, nuevo_stock }
  */
 async function registrarEntrada(datos) {
   const { id_producto, id_vendedor, cantidad, costo_unitario, referencia, observaciones } = datos;
@@ -75,39 +76,26 @@ async function registrarEntrada(datos) {
       throw err;
     }
 
-    // Calcular nuevo costo promedio ponderado
-    const stockAnterior = costos.stock;
-    const costoAnterior = costos.costo_compra;
-    let nuevoCostoCompra;
+    const nuevoStock = costos.stock + cantidad;
 
-    if (stockAnterior <= 0) {
-      nuevoCostoCompra = costo_unitario;
-    } else {
-      nuevoCostoCompra =
-        ((stockAnterior * costoAnterior) + (cantidad * costo_unitario)) /
-        (stockAnterior + cantidad);
-    }
-    nuevoCostoCompra = Math.round(nuevoCostoCompra * 100) / 100;
-
-    const nuevoStock = stockAnterior + cantidad;
-
-    // Actualizar producto: stock y costo_compra
+    // Actualizar producto: solo stock (el costo real se rastrea por lote FIFO)
     await conn.execute(
       `UPDATE producto SET stock = ?, costo_compra = ? WHERE id_producto = ?`,
-      [nuevoStock, nuevoCostoCompra, id_producto]
+      [nuevoStock, costo_unitario, id_producto]
     );
 
-    // Insertar movimiento
+    // Insertar movimiento ENTRADA con cantidad_restante (lote FIFO)
     const [result] = await conn.execute(
       `INSERT INTO movimiento_inventario
         (id_producto, id_vendedor, tipo_movimiento, cantidad, costo_unitario,
-         referencia, observaciones)
-       VALUES (?, ?, 'ENTRADA', ?, ?, ?, ?)`,
+         cantidad_restante, referencia, observaciones)
+       VALUES (?, ?, 'ENTRADA', ?, ?, ?, ?, ?)`,
       [
         id_producto,
         id_vendedor,
         cantidad,
         costo_unitario,
+        cantidad,           // cantidad_restante = cantidad (lote completo disponible)
         referencia || null,
         observaciones || null
       ]
@@ -117,8 +105,7 @@ async function registrarEntrada(datos) {
 
     return {
       id_movimiento: result.insertId,
-      nuevo_stock: nuevoStock,
-      nuevo_costo_compra: nuevoCostoCompra
+      nuevo_stock: nuevoStock
     };
   } catch (error) {
     await conn.rollback();
@@ -131,10 +118,9 @@ async function registrarEntrada(datos) {
 // ─── SALIDA: Venta (llamada desde Pedido.servicios al confirmar) ───
 
 /**
- * Registra movimientos de SALIDA por cada detalle del pedido.
- * Calcula ganancia bruta, comisión y ganancia neta.
- *
- * Debe ser llamada dentro de una transacción existente o autónomamente.
+ * Registra movimientos de SALIDA por cada detalle del pedido usando FIFO.
+ * Consume lotes de entrada en orden cronológico (más antiguo primero).
+ * Genera múltiples movimientos SALIDA si una venta cruza varios lotes.
  *
  * @param {number} idPedido
  * @param {Object} [externalConn] - Conexión de transacción externa (opcional)
@@ -170,55 +156,130 @@ async function registrarSalidasPorPedido(idPedido, externalConn) {
     const movimientos = [];
 
     for (const det of detalles) {
-      const cantidad = Number(det.cantidad) || 0;
+      const cantidadTotal = Number(det.cantidad) || 0;
       const precioVenta = Number(det.precio_unitario) || 0;
-      const costoCompra = Number(det.costo_compra) || 0;
       const comisionPct = det.comision_plataforma != null
         ? Number(det.comision_plataforma)
         : COMISION_DEFAULT;
       const idVendedor = det.id_vendedor;
+      const costoFallback = Number(det.costo_compra) || 0;
 
-      if (!idVendedor || cantidad <= 0) continue;
+      if (!idVendedor || cantidadTotal <= 0) continue;
 
-      // Cálculos financieros
-      const gananciaBruta = Math.round(((precioVenta - costoCompra) * cantidad) * 100) / 100;
-      const comisionMonto = Math.round((comisionPct * precioVenta * cantidad) * 100) / 100;
-      const gananciaNeta = Math.round((gananciaBruta - comisionMonto) * 100) / 100;
-
-      const [result] = await conn.execute(
-        `INSERT INTO movimiento_inventario
-          (id_producto, id_vendedor, tipo_movimiento, cantidad, costo_unitario,
-           precio_venta_unit, id_pedido, id_detalle_pedido,
-           ganancia_bruta, comision_plataforma, ganancia_neta,
-           referencia, observaciones)
-         VALUES (?, ?, 'SALIDA', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          det.id_producto,
-          idVendedor,
-          cantidad,
-          costoCompra,
-          precioVenta,
-          idPedido,
-          det.id_detalle,
-          gananciaBruta,
-          comisionMonto,
-          gananciaNeta,
-          `PEDIDO-${idPedido}`,
-          `Venta confirmada - Pedido #${idPedido}`
-        ]
+      // ─── FIFO: obtener lotes ENTRADA con stock disponible ───
+      const [lotes] = await conn.execute(
+        `SELECT id_movimiento, costo_unitario, cantidad_restante
+         FROM movimiento_inventario
+         WHERE id_producto = ? AND id_vendedor = ?
+           AND tipo_movimiento = 'ENTRADA'
+           AND cantidad_restante > 0
+         ORDER BY fecha ASC, id_movimiento ASC
+         FOR UPDATE`,
+        [det.id_producto, idVendedor]
       );
 
-      movimientos.push({
-        id_movimiento: result.insertId,
-        id_producto: det.id_producto,
-        id_vendedor: idVendedor,
-        cantidad,
-        precio_venta: precioVenta,
-        costo_compra: costoCompra,
-        ganancia_bruta: gananciaBruta,
-        comision_plataforma: comisionMonto,
-        ganancia_neta: gananciaNeta
-      });
+      let pendiente = cantidadTotal;
+
+      // Consumir lotes FIFO
+      for (const lote of lotes) {
+        if (pendiente <= 0) break;
+
+        const disponible = Number(lote.cantidad_restante);
+        const consumir = Math.min(disponible, pendiente);
+        const costoLote = Number(lote.costo_unitario) || 0;
+
+        // Decrementar cantidad_restante del lote
+        await conn.execute(
+          `UPDATE movimiento_inventario SET cantidad_restante = cantidad_restante - ? WHERE id_movimiento = ?`,
+          [consumir, lote.id_movimiento]
+        );
+
+        // Cálculos financieros con costo REAL del lote
+        const gananciaBruta = Math.round(((precioVenta - costoLote) * consumir) * 100) / 100;
+        const comisionMonto = Math.round((comisionPct * precioVenta * consumir) * 100) / 100;
+        const gananciaNeta = Math.round((gananciaBruta - comisionMonto) * 100) / 100;
+
+        const [result] = await conn.execute(
+          `INSERT INTO movimiento_inventario
+            (id_producto, id_vendedor, tipo_movimiento, cantidad, costo_unitario,
+             precio_venta_unit, id_pedido, id_detalle_pedido,
+             ganancia_bruta, comision_plataforma, ganancia_neta,
+             referencia, observaciones)
+           VALUES (?, ?, 'SALIDA', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            det.id_producto,
+            idVendedor,
+            consumir,
+            costoLote,
+            precioVenta,
+            idPedido,
+            det.id_detalle,
+            gananciaBruta,
+            comisionMonto,
+            gananciaNeta,
+            `PEDIDO-${idPedido}`,
+            `FIFO lote #${lote.id_movimiento} — Pedido #${idPedido}`
+          ]
+        );
+
+        movimientos.push({
+          id_movimiento: result.insertId,
+          id_producto: det.id_producto,
+          id_vendedor: idVendedor,
+          cantidad: consumir,
+          precio_venta: precioVenta,
+          costo_compra: costoLote,
+          lote_origen: lote.id_movimiento,
+          ganancia_bruta: gananciaBruta,
+          comision_plataforma: comisionMonto,
+          ganancia_neta: gananciaNeta
+        });
+
+        pendiente -= consumir;
+      }
+
+      // Fallback: si quedan unidades sin lote ENTRADA (inventario previo al FIFO)
+      if (pendiente > 0) {
+        const gananciaBruta = Math.round(((precioVenta - costoFallback) * pendiente) * 100) / 100;
+        const comisionMonto = Math.round((comisionPct * precioVenta * pendiente) * 100) / 100;
+        const gananciaNeta = Math.round((gananciaBruta - comisionMonto) * 100) / 100;
+
+        const [result] = await conn.execute(
+          `INSERT INTO movimiento_inventario
+            (id_producto, id_vendedor, tipo_movimiento, cantidad, costo_unitario,
+             precio_venta_unit, id_pedido, id_detalle_pedido,
+             ganancia_bruta, comision_plataforma, ganancia_neta,
+             referencia, observaciones)
+           VALUES (?, ?, 'SALIDA', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            det.id_producto,
+            idVendedor,
+            pendiente,
+            costoFallback,
+            precioVenta,
+            idPedido,
+            det.id_detalle,
+            gananciaBruta,
+            comisionMonto,
+            gananciaNeta,
+            `PEDIDO-${idPedido}`,
+            `Sin lote FIFO (costo producto) — Pedido #${idPedido}`
+          ]
+        );
+
+        movimientos.push({
+          id_movimiento: result.insertId,
+          id_producto: det.id_producto,
+          id_vendedor: idVendedor,
+          cantidad: pendiente,
+          precio_venta: precioVenta,
+          costo_compra: costoFallback,
+          lote_origen: null,
+          ganancia_bruta: gananciaBruta,
+          comision_plataforma: comisionMonto,
+          ganancia_neta: gananciaNeta
+        });
+      }
     }
 
     if (isOwnConn) await conn.commit();
