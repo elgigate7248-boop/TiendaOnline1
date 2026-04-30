@@ -414,7 +414,7 @@ async function adminTopVendedores(filtros = {}) {
           SUM(m2.ganancia_neta) AS gn
         FROM movimiento_inventario m2
         WHERE m2.tipo_movimiento = 'SALIDA'
-          ${rango.whereExtra}
+          ${rango.whereExtra.replace(/m\.fecha/g, 'm2.fecha')}
         GROUP BY m2.id_vendedor
       ) norm
     ) maxvals
