@@ -72,6 +72,7 @@ const analyticsRutas = require("./rutas/Analytics.rutas.js");
 const kardexRutas = require("./rutas/Kardex.rutas.js");
 const ubicacionRutas = require("./rutas/Ubicacion.rutas.js");
 const movimientoInventarioRutas = require("./rutas/MovimientoInventario.rutas.js");
+const reportesRutas = require("./rutas/Reportes.rutas.js");
 
 // Asignar rutas
 app.use("/usuario", usuarioRutas);
@@ -93,6 +94,7 @@ app.use("/analytics", analyticsRutas);
 app.use("/kardex", kardexRutas);
 app.use("/ubicacion", ubicacionRutas);
 app.use("/movimiento-inventario", movimientoInventarioRutas);
+app.use("/reportes", reportesRutas);
 
 // Ruta raíz
 app.get("/", (req, res) => {
@@ -119,7 +121,8 @@ app.get("/", (req, res) => {
       "/analytics",
       "/kardex",
       "/ubicacion",
-      "/movimiento-inventario"
+      "/movimiento-inventario",
+      "/reportes"
     ]
   });
 });
