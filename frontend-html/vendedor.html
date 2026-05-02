@@ -346,6 +346,146 @@
         stroke-dashoffset: 50;
       }
     }
+
+    /* ═══ Inteligencia de Negocio ═══ */
+    .bi-alerta {
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      animation: fadeIn 0.4s ease;
+    }
+    .bi-alerta.critico {
+      background: rgba(231,76,60,0.15);
+      border-left: 4px solid #e74c3c;
+    }
+    .bi-alerta.medio {
+      background: rgba(243,156,18,0.15);
+      border-left: 4px solid #f39c12;
+    }
+    .bi-alerta.informativo {
+      background: rgba(52,152,219,0.15);
+      border-left: 4px solid #3498db;
+    }
+    .bi-alerta.positivo {
+      background: rgba(39,174,96,0.15);
+      border-left: 4px solid #27ae60;
+    }
+    .bi-alerta-icono {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .bi-alerta-contenido {
+      flex: 1;
+    }
+    .bi-alerta-mensaje {
+      color: rgba(255,255,255,0.9);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+    .bi-alerta-accion {
+      display: inline-block;
+    }
+
+    .bi-rec-card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      border-left: 4px solid transparent;
+      transition: all 0.3s ease;
+    }
+    .bi-rec-card:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateX(4px);
+    }
+    .bi-rec-card.prioridad-alta { border-left-color: #e74c3c; }
+    .bi-rec-card.prioridad-media { border-left-color: #f39c12; }
+    .bi-rec-card.prioridad-baja { border-left-color: #3498db; }
+
+    .bi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .bi-badge-estrella { background: rgba(46,204,113,0.2); color: #2ecc71; }
+    .bi-badge-oportunidad { background: rgba(52,152,219,0.2); color: #3498db; }
+    .bi-badge-optimizar { background: rgba(243,156,18,0.2); color: #f39c12; }
+    .bi-badge-eliminar { background: rgba(231,76,60,0.2); color: #e74c3c; }
+    .bi-badge-a { background: rgba(46,204,113,0.2); color: #2ecc71; }
+    .bi-badge-b { background: rgba(52,152,219,0.2); color: #3498db; }
+    .bi-badge-c { background: rgba(149,165,166,0.2); color: #95a5a6; }
+
+    .bi-rotacion-rapido { color: #2ecc71; }
+    .bi-rotacion-medio { color: #f39c12; }
+    .bi-rotacion-lento { color: #e74c3c; }
+
+    .bi-sim-resultado {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .bi-sim-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.88rem;
+    }
+    .bi-sim-row:last-child { border-bottom: none; }
+    .bi-sim-label { color: rgba(255,255,255,0.6); }
+    .bi-sim-value { font-weight: 600; }
+    .bi-sim-positivo { color: #2ecc71; }
+    .bi-sim-negativo { color: #e74c3c; }
+
+    .bi-insight-card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 16px;
+      height: 100%;
+    }
+    .bi-insight-card h6 {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+    .bi-insight-card p {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0;
+    }
+
+    .bi-matriz-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.85rem;
+    }
+    .bi-matriz-item:last-child { border-bottom: none; }
+
+    .bi-cross-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    [data-bs-toggle="tooltip"] {
+      cursor: help;
+      border-bottom: 1px dotted rgba(255,255,255,0.4);
+    }
   </style>
 </head>
 <body class="admin-dark">
@@ -481,6 +621,11 @@
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="inventario-tab" data-bs-toggle="tab" data-bs-target="#inventario" type="button" role="tab">
           <i class="fas fa-file-invoice-dollar me-2"></i>Inventario
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="inteligencia-tab" data-bs-toggle="tab" data-bs-target="#inteligencia" type="button" role="tab">
+          <i class="fas fa-brain me-2"></i>Inteligencia
         </button>
       </li>
       <li class="nav-item" role="presentation">
@@ -909,6 +1054,196 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Inteligencia de Negocio Tab -->
+      <div class="tab-pane fade" id="inteligencia" role="tabpanel">
+        <!-- Filtro de fechas -->
+        <div class="card mb-4">
+          <div class="card-body py-3">
+            <div class="row align-items-end g-3">
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Fecha inicio</label>
+                <input type="date" class="form-control form-control-sm" id="biFechaInicio">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Fecha fin</label>
+                <input type="date" class="form-control form-control-sm" id="biFechaFin">
+              </div>
+              <div class="col-md-3">
+                <button class="btn btn-primary btn-sm w-100" onclick="cargarInteligenciaNegocio()">
+                  <i class="fas fa-brain me-1"></i>Analizar
+                </button>
+              </div>
+              <div class="col-md-3 text-end">
+                <span class="badge bg-secondary" id="biPeriodoInfo">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs Avanzados -->
+        <div class="row g-3 mb-4" id="biKPIs">
+          <div class="col-md-3">
+            <div class="card stat-card text-white" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+              <div class="card-body py-3">
+                <h6 class="card-title mb-1 small"><i class="fas fa-lock me-1"></i>Capital Inmovilizado</h6>
+                <h4 class="mb-0" id="biCapitalInmovilizado">$0</h4>
+                <small class="opacity-75">Retenido en stock</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card text-white" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+              <div class="card-body py-3">
+                <h6 class="card-title mb-1 small"><i class="fas fa-box-open me-1"></i>Productos con ventas</h6>
+                <h4 class="mb-0" id="biProductosConVentas">0</h4>
+                <small class="opacity-75">En el período</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card text-white" style="background: linear-gradient(135deg, #e67e22, #f39c12);">
+              <div class="card-body py-3">
+                <h6 class="card-title mb-1 small"><i class="fas fa-exclamation-triangle me-1"></i>Sin ventas</h6>
+                <h4 class="mb-0" id="biProductosSinVentas">0</h4>
+                <small class="opacity-75">Productos estancados</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card text-white" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">
+              <div class="card-body py-3">
+                <h6 class="card-title mb-1 small"><i class="fas fa-bell me-1"></i>Alertas activas</h6>
+                <h4 class="mb-0" id="biTotalAlertas">0</h4>
+                <small class="opacity-75">Requieren atención</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alertas Críticas -->
+        <div id="biAlertasContainer" class="mb-4" style="display:none;">
+          <h5 class="mb-3"><i class="fas fa-exclamation-circle me-2 text-danger"></i>Alertas Críticas</h5>
+          <div id="biAlertasList"></div>
+        </div>
+
+        <!-- Recomendaciones Inteligentes -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #f39c12, #e67e22); border: none;">
+            <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recomendaciones Inteligentes</h6>
+            <span class="badge bg-light text-dark" id="biTotalRecomendaciones">0</span>
+          </div>
+          <div class="card-body" id="biRecomendacionesList">
+            <div class="text-center text-muted py-4">
+              <i class="fas fa-brain fa-2x mb-2 d-block opacity-50"></i>
+              Haz clic en <strong>Analizar</strong> para generar recomendaciones
+            </div>
+          </div>
+        </div>
+
+        <!-- Insights -->
+        <div id="biInsightsContainer" class="mb-4" style="display:none;">
+          <h5 class="mb-3"><i class="fas fa-chart-line me-2 text-info"></i>Insights del Negocio</h5>
+          <div class="row g-3" id="biInsightsList"></div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <!-- Matriz Estratégica -->
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chess me-2"></i>Matriz Estratégica de Portafolio</h6>
+              </div>
+              <div class="card-body" id="biMatrizBody">
+                <div class="text-center text-muted py-3 small">Sin datos aún</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Segmentación ABC -->
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-layer-group me-2"></i>Segmentación ABC</h6>
+              </div>
+              <div class="card-body" id="biABCBody">
+                <div class="text-center text-muted py-3 small">Sin datos aún</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <!-- Rotación de Inventario -->
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-sync-alt me-2"></i>Rotación de Inventario</h6>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th>Stock</th>
+                        <th>Vtas/día</th>
+                        <th>Días stock</th>
+                        <th>Velocidad</th>
+                      </tr>
+                    </thead>
+                    <tbody id="biRotacionBody">
+                      <tr><td colspan="5" class="text-center text-muted small">Sin datos</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Simulador de Precios -->
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Simulador de Precios</h6>
+              </div>
+              <div class="card-body">
+                <div class="row g-2 mb-3">
+                  <div class="col-5">
+                    <select class="form-select form-select-sm" id="simProducto">
+                      <option value="">Selecciona producto</option>
+                    </select>
+                  </div>
+                  <div class="col-4">
+                    <div class="input-group input-group-sm">
+                      <input type="number" class="form-control" id="simVariacion" placeholder="-10" step="1">
+                      <span class="input-group-text">%</span>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <button class="btn btn-primary btn-sm w-100" onclick="ejecutarSimulacion()">
+                      <i class="fas fa-play me-1"></i>Simular
+                    </button>
+                  </div>
+                </div>
+                <div id="simResultado">
+                  <div class="text-center text-muted py-3 small">
+                    Selecciona un producto y variación de precio para simular
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cross-Selling -->
+        <div class="card mb-4" id="biCrossSellingCard" style="display:none;">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-link me-2"></i>Oportunidades de Cross-Selling</h6>
+          </div>
+          <div class="card-body" id="biCrossSellingBody"></div>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 const reportesSvc = require('../servicios/Reportes.servicios');
+const recomendacionesSvc = require('../servicios/Recomendaciones.servicios');
 
 // ═══════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -134,5 +135,40 @@ exports.adminEstadisticas = async (req, res) => {
   } catch (err) {
     console.error('❌ Reporte admin estadísticas:', err.message);
     res.status(500).json({ error: 'Error al generar estadísticas generales' });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// INTELIGENCIA DE NEGOCIO — VENDEDOR
+// ═══════════════════════════════════════════════════════════════════════
+
+exports.vendedorInteligenciaNegocio = async (req, res) => {
+  try {
+    const idVendedor = getIdVendedor(req);
+    if (!idVendedor) return res.status(401).json({ error: 'Vendedor no autenticado' });
+
+    const data = await recomendacionesSvc.generarRecomendaciones(idVendedor, getFiltros(req.query));
+    res.json({ reporte: 'inteligencia_negocio', data });
+  } catch (err) {
+    console.error('❌ Inteligencia de negocio:', err.message);
+    res.status(500).json({ error: 'Error al generar inteligencia de negocio' });
+  }
+};
+
+exports.vendedorSimularPrecio = async (req, res) => {
+  try {
+    const idVendedor = getIdVendedor(req);
+    if (!idVendedor) return res.status(401).json({ error: 'Vendedor no autenticado' });
+
+    const { id_producto, variacion } = req.query;
+    if (!id_producto || variacion === undefined) {
+      return res.status(400).json({ error: 'Parámetros requeridos: id_producto y variacion (%)' });
+    }
+
+    const data = await recomendacionesSvc.simularPrecio(idVendedor, Number(id_producto), Number(variacion));
+    res.json({ reporte: 'simulacion_precio', data });
+  } catch (err) {
+    console.error('❌ Simulación de precio:', err.message);
+    res.status(500).json({ error: err.message || 'Error al simular precio' });
   }
 };

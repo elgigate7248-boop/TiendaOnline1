@@ -24,6 +24,12 @@ router.get('/vendedor/resumen', authVendedor, ctrl.vendedorResumenFinanciero);
 // GET /reportes/vendedor/analisis-inventario?fecha_inicio=&fecha_fin=&limit=
 router.get('/vendedor/analisis-inventario', authVendedor, ctrl.vendedorAnalisisInventario);
 
+// GET /reportes/vendedor/inteligencia-negocio?fecha_inicio=&fecha_fin=
+router.get('/vendedor/inteligencia-negocio', authVendedor, ctrl.vendedorInteligenciaNegocio);
+
+// GET /reportes/vendedor/simular-precio?id_producto=&variacion=
+router.get('/vendedor/simular-precio', authVendedor, ctrl.vendedorSimularPrecio);
+
 // ═══════════════════════════════════════════════════════════════════════
 // REPORTES ADMIN
 // Requieren: autenticación + rol ADMIN/SUPER_ADMIN
