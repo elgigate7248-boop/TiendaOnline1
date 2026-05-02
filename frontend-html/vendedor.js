@@ -213,6 +213,24 @@ function aplicarFiltrosProductos() {
   renderProductos(resultado);
 }
 
+function getBIBadges(idProducto) {
+  if (!biData) return '';
+  const badges = [];
+  const matriz = (biData.matriz_estrategica || []).find(m => m.id_producto === idProducto);
+  if (matriz) {
+    if (matriz.categoria_estrategica === 'Estrella') badges.push('<span class="bi-badge bi-badge-estrella" title="Alto margen + alto volumen">⭐ Más rentable</span>');
+    else if (matriz.categoria_estrategica === 'Eliminar') badges.push('<span class="bi-badge bi-badge-eliminar" title="Bajo margen + bajo volumen">❌ Riesgo</span>');
+  }
+  const rotacion = (biData.metricas_avanzadas?.rotacion_productos || []).find(r => r.id_producto === idProducto);
+  if (rotacion) {
+    if (rotacion.clasificacion === 'RÁPIDO') badges.push('<span class="bi-badge bi-badge-estrella" title="Se vende rápido">🟢 Alta rotación</span>');
+    else if (rotacion.clasificacion === 'LENTO' && rotacion.stock > 0) badges.push('<span class="bi-badge bi-badge-eliminar" title="Rotación lenta">🔴 Stock muerto</span>');
+  }
+  const reorden = (biData.metricas_avanzadas?.puntos_reorden || []).find(p => p.id_producto === idProducto);
+  if (reorden) badges.push(`<span class="bi-badge bi-badge-optimizar" title="Se agota en ${reorden.dias_restantes} días">⚠️ Reabastecer</span>`);
+  return badges.join(' ');
+}
+
 function renderProductos(productos) {
   const tbody = document.getElementById('productosTableBody');
   
@@ -222,6 +240,7 @@ function renderProductos(productos) {
     const stockBadge = producto.stock > 0
       ? `<span class="badge bg-success">Activo</span>`
       : `<span class="badge bg-danger">Sin stock</span>`;
+    const biBadges = getBIBadges(producto.id_producto);
 
     return `
       <tr>
@@ -229,6 +248,7 @@ function renderProductos(productos) {
         <td>
           <div class="fw-semibold">${escapeHtml(producto.nombre)}</div>
           <div class="small text-muted">#${producto.id_producto}</div>
+          ${biBadges ? `<div class="mt-1">${biBadges}</div>` : ''}
         </td>
         <td>${categoria ? escapeHtml(categoria.nombre) : 'N/A'}</td>
         <td>$${parseFloat(producto.precio || 0).toFixed(2)}</td>
