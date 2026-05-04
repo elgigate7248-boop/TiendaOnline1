@@ -148,7 +148,14 @@ function initTablaMain() {
       }
     },
     { key: 'estado_inventario', label: 'Estado', sortable: true, class: 'text-center',
-      render: v => badgeEstado(v) }
+      render: v => badgeEstado(v) },
+    { key: 'id_producto', label: '', sortable: false, class: 'text-center',
+      render: (v) => `<a href="../trazabilidad.html?id_producto=${v}"
+          class="btn btn-sm"
+          style="background:rgba(42,82,152,0.25);border:1px solid rgba(42,82,152,0.45);color:#63b3ed;white-space:nowrap;padding:3px 8px;font-size:.72rem"
+          title="Ver trazabilidad FIFO de este producto">
+          <i class="fas fa-search me-1"></i>Trazabilidad
+        </a>` }
   ];
 
   _tablaMain = new AdvancedTable({
