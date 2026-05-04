@@ -115,8 +115,17 @@ function initTablaMain() {
     { key: 'ingresos_brutos', label: 'Ingresos', sortable: true, class: 'text-end',
       render: v => fmt.moneda(v), tooltip: 'Precio venta × cantidad vendida' },
     { key: 'costo_total', label: 'Costos', sortable: true, class: 'text-end',
-      render: v => `<span class="text-danger">${fmt.moneda(v)}</span>`,
-      tooltip: 'Costo FIFO real × cantidad vendida' },
+      render: (v, row) => {
+        const badge = row.costo_estimado
+          ? ` <span class="badge bg-secondary ms-1" style="font-size:0.6rem"
+                data-bs-toggle="tooltip"
+                title="Costo estimado: los movimientos de SALIDA tenían costo=0 (sin lote FIFO al momento de la venta). Se usó el costo promedio de compra como aproximación.">
+                ~est
+              </span>`
+          : '';
+        return `<span class="text-danger">${fmt.moneda(v)}</span>${badge}`;
+      },
+      tooltip: 'Costo FIFO real × cantidad vendida (~ = estimado por costo promedio de compra)' },
     { key: 'comision_total', label: 'Comisión', sortable: true, class: 'text-end',
       render: v => `<span class="text-warning">${fmt.moneda(v)}</span>`,
       tooltip: 'Comisión de plataforma cobrada' },
@@ -365,6 +374,11 @@ function renderProblemasYRecomendaciones() {
   if (sinVentas.length && capitalMuerto > 0)
     alertas.push({ nivel: 'info',    icono: 'lock', titulo: `Capital inmovilizado en productos sin venta: ${fmt.moneda(capitalMuerto)}`,
       desc: `${sinVentas.length} producto(s) con stock pero sin ventas en el período. Evalúa liquidar o promocionar.` });
+
+  const conCostoEstimado = _productos.filter(p => p.costo_estimado);
+  if (conCostoEstimado.length)
+    alertas.push({ nivel: 'warning', icono: 'flask', titulo: `${conCostoEstimado.length} producto(s) con costo estimado (~est)`,
+      desc: `Los movimientos de SALIDA de estos productos tenían costo_unitario=0 en la base de datos (el lote FIFO no estaba disponible al momento de la venta o el campo "costo_compra" del producto era 0). Se usó el costo promedio de las compras (ENTRADA) como aproximación. Productos afectados: ${conCostoEstimado.map(p => p.nombre).join(', ')}.` });
 
   const elAlertas = $('alertasProblemas');
   if (elAlertas) {

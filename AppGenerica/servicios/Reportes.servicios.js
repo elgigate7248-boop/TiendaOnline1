@@ -736,14 +736,26 @@ async function vendedorProductosDetalle(idVendedor, filtros = {}) {
   const medianaVolumen = calcularMediana(rows.map(r => Number(r.cantidad_vendida) || 0));
 
   const productos = rows.map(row => {
-    const costo_total           = Number(row.costo_total)           || 0;
-    const ganancia_neta         = Number(row.ganancia_neta)         || 0;
+    const costo_total_db        = Number(row.costo_total)           || 0;
+    const ganancia_neta_db      = Number(row.ganancia_neta)         || 0;
     const ingresos_brutos       = Number(row.ingresos_brutos)       || 0;
     const comision_total        = Number(row.comision_total)        || 0;
     const stock_actual          = Number(row.stock_actual)          || 0;
     const cantidad_vendida      = Number(row.cantidad_vendida)      || 0;
     const cantidad_comprada     = Number(row.cantidad_comprada)     || 0;
     const costo_unitario_prom   = Number(row.costo_unitario_promedio) || 0;
+
+    // ── Fallback de costo: si las SALIDAs tienen costo_unitario = 0 ──────
+    // Ocurre cuando no había lotes FIFO disponibles al momento de la venta
+    // o el campo costo_compra del producto era 0. Usamos el promedio de
+    // las ENTRADAs como estimación y marcamos costo_estimado = true.
+    const costo_estimado = costo_total_db === 0 && costo_unitario_prom > 0 && cantidad_vendida > 0;
+    const costo_total    = costo_estimado
+      ? Math.round(costo_unitario_prom * cantidad_vendida * 100) / 100
+      : costo_total_db;
+    const ganancia_neta  = costo_estimado
+      ? Math.round((ingresos_brutos - costo_total - comision_total) * 100) / 100
+      : ganancia_neta_db;
 
     // ── Margen y ROI ──────────────────────────────────────────────────
     const margen_pct = costo_total > 0
@@ -843,6 +855,7 @@ async function vendedorProductosDetalle(idVendedor, filtros = {}) {
       comision_total,
       ganancia_neta,
       costo_unitario_promedio: costo_unitario_prom,
+      costo_estimado,
       capital_invertido,
       margen_pct,
       roi,
