@@ -142,6 +142,19 @@ exports.adminEstadisticas = async (req, res) => {
 // INTELIGENCIA DE NEGOCIO — VENDEDOR
 // ═══════════════════════════════════════════════════════════════════════
 
+exports.vendedorProductosDetalle = async (req, res) => {
+  try {
+    const idVendedor = getIdVendedor(req);
+    if (!idVendedor) return res.status(401).json({ error: 'Vendedor no autenticado' });
+
+    const data = await reportesSvc.vendedorProductosDetalle(idVendedor, getFiltros(req.query));
+    res.json({ reporte: 'productos_detalle', data });
+  } catch (err) {
+    console.error('❌ Reporte vendedor productos-detalle:', err.message);
+    res.status(500).json({ error: 'Error al generar análisis detallado de productos' });
+  }
+};
+
 exports.vendedorInteligenciaNegocio = async (req, res) => {
   try {
     const idVendedor = getIdVendedor(req);

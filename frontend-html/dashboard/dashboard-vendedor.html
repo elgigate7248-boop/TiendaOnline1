@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Analítico · Portafolio de Productos</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="../config.js"></script>
+  <style>
+    /* ═══ Base ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* ═══ Header ═════════════════════════════════════════════════════════ */
+    .dv-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 1.25rem 0;
+      box-shadow: 0 4px 20px rgba(102,126,234,0.4);
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+    }
+
+    .dv-brand { font-size: 1.3rem; font-weight: 700; color: #fff; text-decoration: none; }
+    .dv-brand:hover { color: rgba(255,255,255,0.85); }
+
+    .user-avatar {
+      width: 34px; height: 34px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9rem; color: #fff;
+      flex-shrink: 0;
+    }
+
+    /* ═══ Panel de filtros ═══════════════════════════════════════════════ */
+    .filter-bar {
+      background: rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 0.75rem 0;
+    }
+
+    .filter-bar .form-control,
+    .filter-bar .form-select {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 0.875rem;
+    }
+    .filter-bar .form-control::placeholder { color: rgba(255,255,255,0.5); }
+    .filter-bar .form-control:focus,
+    .filter-bar .form-select:focus {
+      background: rgba(255,255,255,0.15);
+      border-color: #667eea;
+      color: #fff;
+      box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.3);
+    }
+    .filter-bar .form-select option { background: #1a1a2e; color: #fff; }
+
+    /* ═══ Loading Overlay ════════════════════════════════════════════════ */
+    #loadingOverlay {
+      position: fixed; inset: 0;
+      background: rgba(15,12,41,0.85);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 9999; flex-direction: column; gap: 1rem;
+    }
+    .dv-spinner {
+      width: 56px; height: 56px;
+      border: 4px solid rgba(102,126,234,0.2);
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══ KPI Cards ══════════════════════════════════════════════════════ */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .kpi-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::after {
+      content: '';
+      position: absolute; top: -20px; right: -20px;
+      width: 80px; height: 80px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .kpi-card.kpi-danger { border-color: rgba(231,76,60,0.4); }
+
+    .kpi-icon { font-size: 1.8rem; opacity: 0.6; margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 1.6rem; font-weight: 800; line-height: 1.1; }
+    .kpi-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.55); margin-top: 0.25rem; }
+
+    /* ═══ Sección principal ══════════════════════════════════════════════ */
+    .dv-main { padding: 1.5rem 0 3rem; }
+
+    /* ═══ Tabs ═══════════════════════════════════════════════════════════ */
+    .dv-tabs { border: none; gap: 4px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+    .dv-tabs::-webkit-scrollbar { height: 4px; }
+    .dv-tabs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+    .dv-tabs .nav-link {
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.7);
+      border-radius: 10px 10px 0 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      padding: 0.6rem 1.1rem;
+      transition: all 0.2s;
+    }
+    .dv-tabs .nav-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .dv-tabs .nav-link.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+    }
+
+    .tab-content > .tab-pane { animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══ Cards internas ═════════════════════════════════════════════════ */
+    .dv-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .dv-card-header {
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 0.9rem 1.25rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .dv-card-body { padding: 1.25rem; }
+
+    /* ═══ Tabla principal ════════════════════════════════════════════════ */
+    .dv-table-wrap { overflow-x: auto; }
+
+    .dv-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.83rem;
+    }
+    .dv-table thead th {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.75);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.4px;
+      padding: 0.75rem 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .dv-table thead th[data-sort]:hover { background: rgba(255,255,255,0.13); color: #fff; }
+    .dv-table tbody td {
+      padding: 0.7rem 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.85);
+      vertical-align: middle;
+    }
+    .dv-table tbody tr:hover td { background: rgba(255,255,255,0.04); }
+    .dv-table tbody tr:last-child td { border-bottom: none; }
+
+    .prod-cell { display: flex; align-items: center; }
+    .prod-thumb { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+    .prod-name { font-weight: 500; }
+
+    /* ═══ Controles de tabla ═════════════════════════════════════════════ */
+    .table-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .table-controls .form-control,
+    .table-controls .form-select {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 0.83rem;
+    }
+    .table-controls .form-control:focus,
+    .table-controls .form-select:focus {
+      background: rgba(255,255,255,0.12);
+      border-color: #667eea;
+      color: #fff;
+      box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.25);
+    }
+    .table-controls .form-control::placeholder { color: rgba(255,255,255,0.4); }
+    .table-controls .form-select option { background: #1a1a2e; }
+    #contadorProductos { font-size: 0.78rem; color: rgba(255,255,255,0.5); white-space: nowrap; }
+
+    /* ═══ Badges ═════════════════════════════════════════════════════════ */
+    .badge { font-size: 0.72rem; }
+    .badge-estado, .badge-rot { font-size: 0.7rem; }
+
+    .badge-mantener    { background: rgba(39,174,96,0.25);  color: #2ecc71; border: 1px solid rgba(39,174,96,0.4); }
+    .badge-promocionar { background: rgba(52,152,219,0.25); color: #3498db; border: 1px solid rgba(52,152,219,0.4); }
+    .badge-revisar     { background: rgba(243,156,18,0.25); color: #f39c12; border: 1px solid rgba(243,156,18,0.4); }
+    .badge-eliminar    { background: rgba(231,76,60,0.25);  color: #e74c3c; border: 1px solid rgba(231,76,60,0.4); }
+
+    /* ═══ Rankings ═══════════════════════════════════════════════════════ */
+    .rank-badge {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
+    }
+    .rank-purple { background: rgba(102,126,234,0.25); color: #667eea; }
+    .rank-green  { background: rgba(39,174,96,0.25);  color: #27ae60; }
+    .rank-red    { background: rgba(231,76,60,0.25);  color: #e74c3c; }
+    .rank-orange { background: rgba(243,156,18,0.25); color: #f39c12; }
+
+    .list-group-item { background: transparent !important; color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.08) !important; }
+
+    /* ═══ Recomendaciones ════════════════════════════════════════════════ */
+    .rec-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .rec-card-header {
+      background: rgba(255,255,255,0.06);
+      padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.88rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .rec-card-body { padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .rec-item {
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .rec-label {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.3px;
+      padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+      background: rgba(255,255,255,0.15);
+    }
+    .rec-critico     { background: rgba(231,76,60,0.15);   border-left: 3px solid #e74c3c; }
+    .rec-urgente     { background: rgba(231,76,60,0.1);    border-left: 3px solid #e67e22; }
+    .rec-medio       { background: rgba(243,156,18,0.1);   border-left: 3px solid #f39c12; }
+    .rec-oportunidad { background: rgba(52,152,219,0.1);   border-left: 3px solid #3498db; }
+    .rec-positivo    { background: rgba(39,174,96,0.1);    border-left: 3px solid #27ae60; }
+
+    /* ═══ Matriz Estratégica ═════════════════════════════════════════════ */
+    .matriz-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .matriz-q {
+      border-radius: 12px;
+      padding: 1rem;
+      min-height: 160px;
+    }
+    .matriz-q-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .matriz-q-title { font-weight: 700; font-size: 0.88rem; }
+    .matriz-q-cnt {
+      font-size: 1.4rem; font-weight: 800;
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.15);
+    }
+    .q-mantener    { background: rgba(39,174,96,0.12);  border: 1px solid rgba(39,174,96,0.3); }
+    .q-promocionar { background: rgba(52,152,219,0.12); border: 1px solid rgba(52,152,219,0.3); }
+    .q-revisar     { background: rgba(243,156,18,0.12); border: 1px solid rgba(243,156,18,0.3); }
+    .q-eliminar    { background: rgba(231,76,60,0.12);  border: 1px solid rgba(231,76,60,0.3); }
+
+    .q-mantener    .matriz-q-title { color: #2ecc71; }
+    .q-promocionar .matriz-q-title { color: #3498db; }
+    .q-revisar     .matriz-q-title { color: #f39c12; }
+    .q-eliminar    .matriz-q-title { color: #e74c3c; }
+
+    .q-subtitle { font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; }
+
+    .matriz-item {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* ═══ Gráficos ═══════════════════════════════════════════════════════ */
+    .chart-box {
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px;
+      padding: 1rem;
+      position: relative;
+    }
+    .chart-box canvas { max-height: 240px; }
+
+    /* ═══ Alertas ════════════════════════════════════════════════════════ */
+    .alert { border-radius: 10px; border: none; }
+    .alert-danger  { background: rgba(231,76,60,0.15);  color: #fc8181; }
+    .alert-warning { background: rgba(243,156,18,0.15); color: #f6ad55; }
+    .alert-info    { background: rgba(52,152,219,0.15); color: #63b3ed; }
+    .alert-success { background: rgba(39,174,96,0.15);  color: #68d391; }
+
+    /* ═══ Botones ════════════════════════════════════════════════════════ */
+    .btn-dv-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none; color: #fff; border-radius: 8px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-dv-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); color: #fff; }
+    .btn-dv-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-dv-outline {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.75);
+      border-radius: 8px;
+      font-size: 0.83rem;
+      transition: all 0.2s;
+    }
+    .btn-dv-outline:hover { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.4); }
+
+    /* ═══ Tooltip Bootstrap override (dark) ═════════════════════════════ */
+    .tooltip-inner { max-width: 240px; text-align: left; font-size: 0.78rem; }
+
+    /* ═══ Scrollbar ══════════════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
+
+    /* ═══ Responsive ═════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .dv-header .d-flex { flex-wrap: wrap; gap: 0.5rem; }
+      .matriz-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .kpi-value { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ Loading Overlay ══════════════════════════════════════════════════════ -->
+<div id="loadingOverlay">
+  <div class="dv-spinner"></div>
+  <div class="text-white-50 small">Calculando métricas FIFO…</div>
+</div>
+
+<!-- ══ Header ═══════════════════════════════════════════════════════════════ -->
+<header class="dv-header">
+  <div class="container-fluid px-4">
+    <div class="d-flex align-items-center gap-3">
+
+      <a href="../vendedor.html" class="dv-brand d-flex align-items-center gap-2 me-2">
+        <i class="fas fa-arrow-left opacity-75 small"></i>
+        <i class="fas fa-chart-pie"></i>
+        <span class="d-none d-sm-inline">Dashboard Analítico</span>
+      </a>
+
+      <div class="vr opacity-25 d-none d-md-block"></div>
+
+      <span class="text-white-50 small d-none d-md-inline">
+        <i class="fas fa-brain me-1"></i>Portafolio de Productos
+      </span>
+
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="text-white-50 small d-none d-sm-inline">
+          <i class="fas fa-clock me-1"></i>
+          Actualizado: <span id="ultimaActualizacion">—</span>
+        </span>
+        <div class="user-avatar" id="userAvatar">V</div>
+        <span class="text-white small d-none d-md-inline" id="vendedorNombre">Vendedor</span>
+        <button onclick="cerrarSesion()" class="btn btn-dv-outline btn-sm ms-1" title="Cerrar sesión">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</header>
+
+<!-- ══ Barra de filtros ══════════════════════════════════════════════════════ -->
+<div class="filter-bar">
+  <div class="container-fluid px-4">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <label class="text-white-50 small flex-shrink-0">
+        <i class="fas fa-calendar me-1"></i>Período:
+      </label>
+      <input type="date" id="fechaInicio" class="form-control form-control-sm" style="max-width:150px">
+      <span class="text-white-50 small">—</span>
+      <input type="date" id="fechaFin"    class="form-control form-control-sm" style="max-width:150px">
+      <button id="btnActualizar" class="btn btn-dv-primary btn-sm">
+        <i class="fas fa-sync-alt me-1"></i>Actualizar
+      </button>
+      <div id="errorBanner" class="alert alert-danger py-1 px-3 mb-0 small" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Contenido principal ═══════════════════════════════════════════════════ -->
+<div class="dv-main">
+  <div class="container-fluid px-4">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpiCapitalInmovilizado">
+      <div class="kpi-card">
+        <div class="kpi-icon text-warning"><i class="fas fa-lock"></i></div>
+        <div class="kpi-value text-warning" id="kpiCapitalInmovilizadoVal">$0</div>
+        <div class="kpi-label">Capital inmovilizado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon text-info"><i class="fas fa-chart-line"></i></div>
+        <div class="kpi-value" id="kpiMargenPromedioVal">0%</div>
+        <div class="kpi-label">Margen promedio portafolio</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon text-success"><i class="fas fa-dollar-sign"></i></div>
+        <div class="kpi-value text-success" id="kpiTotalIngresosVal">$0</div>
+        <div class="kpi-label">Ingresos brutos (período)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon text-success"><i class="fas fa-hand-holding-usd"></i></div>
+        <div class="kpi-value text-success" id="kpiTotalGananciaVal">$0</div>
+        <div class="kpi-label">Ganancia neta (período)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon text-primary"><i class="fas fa-percentage"></i></div>
+        <div class="kpi-value" id="kpiRoiPromedioVal">0%</div>
+        <div class="kpi-label">ROI promedio</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon text-danger"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="kpi-value text-danger" id="kpiProductosRiesgoVal">0</div>
+        <div class="kpi-label">Productos en riesgo</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon text-success"><i class="fas fa-star"></i></div>
+        <div class="kpi-value text-success" id="kpiProductosRentablesVal">0</div>
+        <div class="kpi-label">Productos rentables (&gt;20%)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon text-secondary"><i class="fas fa-boxes"></i></div>
+        <div class="kpi-value" id="kpiTotalProductosVal">0</div>
+        <div class="kpi-label">Total productos analizados</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav dv-tabs mb-0" id="dashTabs" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabAnalisis" type="button">
+          <i class="fas fa-table me-1"></i>Análisis por Producto
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRankings" type="button">
+          <i class="fas fa-trophy me-1"></i>Rankings
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabProblemas" type="button">
+          <i class="fas fa-bell me-1"></i>Problemas &amp; Recomendaciones
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMatriz" type="button">
+          <i class="fas fa-th me-1"></i>Matriz Estratégica
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabReabastecimiento" type="button">
+          <i class="fas fa-truck-loading me-1"></i>Reabastecimiento
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content dv-card rounded-top-0" style="border-top: none;">
+
+      <!-- ══ Tab 1: Análisis por Producto ══════════════════════════════════ -->
+      <div class="tab-pane fade show active p-3" id="tabAnalisis" role="tabpanel">
+
+        <!-- Controles -->
+        <div class="table-controls">
+          <div class="position-relative flex-grow-1" style="max-width: 300px;">
+            <i class="fas fa-search position-absolute top-50 translate-middle-y ms-2 text-white-50 small"></i>
+            <input type="search" id="buscarProducto" class="form-control form-control-sm ps-4" placeholder="Buscar producto…">
+          </div>
+
+          <select id="filtroRotacion" class="form-select form-select-sm" style="max-width:140px">
+            <option value="">Rotación: Todas</option>
+            <option value="Rápido">⚡ Rápido</option>
+            <option value="Medio">🕐 Medio</option>
+            <option value="Lento">🐢 Lento</option>
+            <option value="Sin ventas">— Sin ventas</option>
+          </select>
+
+          <select id="filtroEstado" class="form-select form-select-sm" style="max-width:150px">
+            <option value="">Estado: Todos</option>
+            <option value="OK">✅ OK</option>
+            <option value="Bajo">⚠️ Bajo</option>
+            <option value="Crítico">🔴 Crítico</option>
+            <option value="Agotado">⛔ Agotado</option>
+            <option value="Sin rotación">⏸️ Sin rotación</option>
+          </select>
+
+          <select id="filtroMatriz" class="form-select form-select-sm" style="max-width:150px">
+            <option value="">Estrategia: Todas</option>
+            <option value="Mantener">🟢 Mantener</option>
+            <option value="Promocionar">🔵 Promocionar</option>
+            <option value="Revisar">🟡 Revisar</option>
+            <option value="Eliminar">🔴 Eliminar</option>
+          </select>
+
+          <button id="btnLimpiarFiltros" class="btn btn-dv-outline btn-sm">
+            <i class="fas fa-times me-1"></i>Limpiar
+          </button>
+
+          <span id="contadorProductos" class="ms-auto"></span>
+        </div>
+
+        <!-- Tabla -->
+        <div class="dv-table-wrap">
+          <table id="tablaProductosPrincipal" class="dv-table">
+            <thead><tr></tr></thead>
+            <tbody>
+              <tr><td colspan="12" class="text-center py-5 text-muted">
+                <i class="fas fa-spinner fa-spin me-2"></i>Cargando datos…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="d-flex flex-wrap gap-3 mt-3 pt-2 border-top border-opacity-10">
+          <small class="text-white-50"><i class="fas fa-sort me-1 opacity-50"></i>Clic en columna para ordenar</small>
+          <small class="text-white-50"><span class="badge bg-success me-1">Margen &gt;20%</span>Saludable</small>
+          <small class="text-white-50"><span class="badge bg-warning text-dark me-1">0–20%</span>Medio</small>
+          <small class="text-white-50"><span class="badge bg-danger me-1">&lt;0%</span>Riesgo</small>
+        </div>
+      </div>
+
+      <!-- ══ Tab 2: Rankings ════════════════════════════════════════════════ -->
+      <div class="tab-pane fade p-3" id="tabRankings" role="tabpanel">
+        <div class="row g-3">
+
+          <!-- Más vendidos -->
+          <div class="col-md-6">
+            <div class="dv-card h-100">
+              <div class="dv-card-header">
+                <span><i class="fas fa-fire me-2 text-warning"></i>Más Vendidos (uds)</span>
+              </div>
+              <div class="dv-card-body">
+                <div class="chart-box mb-3" style="height:180px">
+                  <canvas id="chartMasVendidos"></canvas>
+                </div>
+                <ul class="list-group list-group-flush" id="rankingVendidosList"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Más rentables -->
+          <div class="col-md-6">
+            <div class="dv-card h-100">
+              <div class="dv-card-header">
+                <span><i class="fas fa-coins me-2 text-success"></i>Más Rentables (ganancia neta)</span>
+              </div>
+              <div class="dv-card-body">
+                <div class="chart-box mb-3" style="height:180px">
+                  <canvas id="chartMasRentables"></canvas>
+                </div>
+                <ul class="list-group list-group-flush" id="rankingRentablesList"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Peor margen -->
+          <div class="col-md-6">
+            <div class="dv-card">
+              <div class="dv-card-header">
+                <span><i class="fas fa-arrow-down me-2 text-danger"></i>Peor Margen (atención urgente)</span>
+              </div>
+              <div class="dv-card-body">
+                <ul class="list-group list-group-flush" id="rankingPeorMargenList"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mayor capital retenido -->
+          <div class="col-md-6">
+            <div class="dv-card">
+              <div class="dv-card-header">
+                <span><i class="fas fa-lock me-2 text-warning"></i>Mayor Capital Retenido</span>
+              </div>
+              <div class="dv-card-body">
+                <ul class="list-group list-group-flush" id="rankingCapitalList"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Distribución rotación -->
+          <div class="col-md-6">
+            <div class="dv-card">
+              <div class="dv-card-header">
+                <span><i class="fas fa-sync me-2 text-info"></i>Distribución de Rotación</span>
+              </div>
+              <div class="dv-card-body">
+                <div class="chart-box" style="height:200px">
+                  <canvas id="chartRotacion"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Distribución estado inventario -->
+          <div class="col-md-6">
+            <div class="dv-card">
+              <div class="dv-card-header">
+                <span><i class="fas fa-warehouse me-2 text-primary"></i>Estado del Inventario</span>
+              </div>
+              <div class="dv-card-body">
+                <div class="chart-box" style="height:200px">
+                  <canvas id="chartEstadoInventario"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ══ Tab 3: Problemas & Recomendaciones ═════════════════════════════ -->
+      <div class="tab-pane fade p-3" id="tabProblemas" role="tabpanel">
+
+        <h6 class="text-white-50 text-uppercase small mb-3">
+          <i class="fas fa-shield-alt me-2"></i>Diagnóstico del portafolio
+        </h6>
+        <div id="alertasProblemas" class="mb-4"></div>
+
+        <h6 class="text-white-50 text-uppercase small mb-3">
+          <i class="fas fa-lightbulb me-2"></i>Recomendaciones por producto
+        </h6>
+        <div id="recomendacionesContainer"></div>
+
+      </div>
+
+      <!-- ══ Tab 4: Matriz Estratégica ══════════════════════════════════════ -->
+      <div class="tab-pane fade p-3" id="tabMatriz" role="tabpanel">
+
+        <div class="row g-3 mb-3">
+          <div class="col-12">
+            <p class="text-white-50 small mb-0">
+              <i class="fas fa-info-circle me-1"></i>
+              Los productos se clasifican según <strong>margen ≥ 20%</strong> (alto/bajo margen) y
+              <strong>ventas ≥ mediana del portafolio</strong> (alto/bajo volumen).
+            </p>
+          </div>
+        </div>
+
+        <!-- Cuadrantes -->
+        <div class="matriz-grid">
+
+          <div class="matriz-q q-mantener">
+            <div class="matriz-q-header">
+              <div>
+                <div class="matriz-q-title"><i class="fas fa-star me-1"></i>MANTENER</div>
+                <div class="q-subtitle">Alto margen + Alto volumen</div>
+              </div>
+              <div class="matriz-q-cnt text-success" id="cntMantener">0</div>
+            </div>
+            <div id="matrizMantener"></div>
+          </div>
+
+          <div class="matriz-q q-promocionar">
+            <div class="matriz-q-header">
+              <div>
+                <div class="matriz-q-title"><i class="fas fa-bullhorn me-1"></i>PROMOCIONAR</div>
+                <div class="q-subtitle">Alto margen + Bajo volumen</div>
+              </div>
+              <div class="matriz-q-cnt text-info" id="cntPromocionar">0</div>
+            </div>
+            <div id="matrizPromocionar"></div>
+          </div>
+
+          <div class="matriz-q q-revisar">
+            <div class="matriz-q-header">
+              <div>
+                <div class="matriz-q-title"><i class="fas fa-search me-1"></i>REVISAR</div>
+                <div class="q-subtitle">Bajo margen + Alto volumen</div>
+              </div>
+              <div class="matriz-q-cnt text-warning" id="cntRevisar">0</div>
+            </div>
+            <div id="matrizRevisar"></div>
+          </div>
+
+          <div class="matriz-q q-eliminar">
+            <div class="matriz-q-header">
+              <div>
+                <div class="matriz-q-title"><i class="fas fa-trash me-1"></i>ELIMINAR</div>
+                <div class="q-subtitle">Bajo margen + Bajo volumen</div>
+              </div>
+              <div class="matriz-q-cnt text-danger" id="cntEliminar">0</div>
+            </div>
+            <div id="matrizEliminar"></div>
+          </div>
+
+        </div>
+
+        <!-- Gráfico de burbujas -->
+        <div class="dv-card">
+          <div class="dv-card-header">
+            <span><i class="fas fa-project-diagram me-2"></i>Mapa de posicionamiento estratégico</span>
+            <small class="text-white-50">Tamaño burbuja = capital invertido</small>
+          </div>
+          <div class="dv-card-body">
+            <div class="chart-box" style="height:320px">
+              <canvas id="chartMatrizBurbuja"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══ Tab 5: Reabastecimiento ═════════════════════════════════════════ -->
+      <div class="tab-pane fade p-3" id="tabReabastecimiento" role="tabpanel">
+
+        <div class="alert alert-info mb-3 py-2 px-3">
+          <i class="fas fa-info-circle me-2"></i>
+          <small>Tabla ordenada por urgencia. Los días restantes se calculan como: <strong>stock actual ÷ ventas diarias promedio</strong>.</small>
+        </div>
+
+        <div class="dv-table-wrap">
+          <table id="tablaReabastecimiento" class="dv-table">
+            <thead><tr></tr></thead>
+            <tbody>
+              <tr><td colspan="6" class="text-center py-4 text-muted">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Leyenda urgencia -->
+        <div class="d-flex flex-wrap gap-3 mt-3 pt-2 border-top border-opacity-10">
+          <small class="text-white-50">
+            <span class="badge bg-danger me-1">≤ 3 días</span>Crítico — reabastecer HOY
+          </small>
+          <small class="text-white-50">
+            <span class="badge bg-warning text-dark me-1">4–10 días</span>Urgente
+          </small>
+          <small class="text-white-50">
+            <span class="badge bg-info text-dark me-1">11–30 días</span>Planificar
+          </small>
+          <small class="text-white-50">
+            <span class="badge bg-success me-1">&gt; 30 días</span>Sin urgencia
+          </small>
+        </div>
+      </div>
+
+    </div><!-- /tab-content -->
+  </div><!-- /container-fluid -->
+</div><!-- /dv-main -->
+
+<!-- ── Scripts ──────────────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="data-table.js"></script>
+<script src="chart-factory.js"></script>
+<script src="dashboard-vendedor.js"></script>
+</body>
+</html>

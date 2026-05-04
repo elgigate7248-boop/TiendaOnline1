@@ -626,6 +626,265 @@ async function adminEstadisticas(filtros = {}) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// ANÁLISIS AVANZADO POR PRODUCTO — VENDEDOR
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Calcula la mediana de un array numérico.
+ */
+function calcularMediana(arr) {
+  if (!arr.length) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/**
+ * Reporte avanzado por producto: métricas FIFO reales, rotación, rentabilidad,
+ * capital invertido, recomendaciones automáticas y matriz estratégica.
+ *
+ * Fuente exclusiva: movimiento_inventario
+ *   ENTRADA → costos reales por lote FIFO, stock disponible
+ *   SALIDA  → ventas reales con ganancia_neta ya calculada
+ *
+ * NO usa detalle_pedido.
+ */
+async function vendedorProductosDetalle(idVendedor, filtros = {}) {
+  const { fecha_inicio, fecha_fin } = filtros;
+
+  // Filtro de fechas para SALIDA (las compras/stock son siempre all-time)
+  let whereSalida = '';
+  const paramsSalida = [];
+  if (fecha_inicio) {
+    whereSalida += ` AND fecha >= CONVERT_TZ(?, '${APP_TZ}', '${DB_TZ}')`;
+    paramsSalida.push(fecha_inicio + ' 00:00:00');
+  }
+  if (fecha_fin) {
+    whereSalida += ` AND fecha <= CONVERT_TZ(?, '${APP_TZ}', '${DB_TZ}')`;
+    paramsSalida.push(fecha_fin + ' 23:59:59');
+  }
+
+  const [rows] = await db.query(`
+    SELECT
+      p.id_producto,
+      p.nombre,
+      p.imagen,
+      COALESCE(e.cantidad_comprada, 0)           AS cantidad_comprada,
+      COALESCE(e.costo_unitario_promedio, 0)     AS costo_unitario_promedio,
+      COALESCE(s.cantidad_vendida, 0)            AS cantidad_vendida,
+      ROUND(COALESCE(s.ingresos_brutos, 0), 2)   AS ingresos_brutos,
+      ROUND(COALESCE(s.costo_total, 0), 2)       AS costo_total,
+      ROUND(COALESCE(s.comision_total, 0), 2)    AS comision_total,
+      ROUND(COALESCE(s.ganancia_neta, 0), 2)     AS ganancia_neta,
+      COALESCE(f.stock_actual, 0)                AS stock_actual,
+      s.primera_venta,
+      s.ultima_venta
+    FROM producto p
+    LEFT JOIN (
+      SELECT
+        id_producto,
+        SUM(cantidad)                                                         AS cantidad_comprada,
+        ROUND(SUM(cantidad * costo_unitario) / NULLIF(SUM(cantidad), 0), 2)  AS costo_unitario_promedio
+      FROM movimiento_inventario
+      WHERE id_vendedor = ? AND tipo_movimiento = 'ENTRADA'
+      GROUP BY id_producto
+    ) e ON p.id_producto = e.id_producto
+    LEFT JOIN (
+      SELECT id_producto, SUM(cantidad_restante) AS stock_actual
+      FROM movimiento_inventario
+      WHERE id_vendedor = ? AND tipo_movimiento = 'ENTRADA'
+      GROUP BY id_producto
+    ) f ON p.id_producto = f.id_producto
+    LEFT JOIN (
+      SELECT
+        id_producto,
+        SUM(cantidad)                        AS cantidad_vendida,
+        SUM(precio_venta_unit * cantidad)    AS ingresos_brutos,
+        SUM(costo_unitario * cantidad)       AS costo_total,
+        SUM(comision_plataforma)             AS comision_total,
+        SUM(ganancia_neta)                   AS ganancia_neta,
+        MIN(fecha)                           AS primera_venta,
+        MAX(fecha)                           AS ultima_venta
+      FROM movimiento_inventario
+      WHERE id_vendedor = ? AND tipo_movimiento = 'SALIDA'
+        ${whereSalida}
+      GROUP BY id_producto
+    ) s ON p.id_producto = s.id_producto
+    WHERE p.id_vendedor = ?
+      AND (COALESCE(e.cantidad_comprada, 0) > 0 OR COALESCE(s.cantidad_vendida, 0) > 0)
+    ORDER BY COALESCE(s.ganancia_neta, 0) DESC
+  `, [idVendedor, idVendedor, idVendedor, ...paramsSalida, idVendedor]);
+
+  if (!rows || rows.length === 0) {
+    return {
+      productos: [],
+      resumen: {
+        total_productos: 0,
+        capital_inmovilizado_total: 0,
+        margen_promedio: 0,
+        roi_promedio: 0,
+        productos_en_riesgo: 0,
+        productos_rentables: 0,
+        total_ingresos: 0,
+        total_ganancia_neta: 0
+      }
+    };
+  }
+
+  // Umbral de volumen dinámico: mediana de cantidad_vendida
+  const medianaVolumen = calcularMediana(rows.map(r => Number(r.cantidad_vendida) || 0));
+
+  const productos = rows.map(row => {
+    const costo_total           = Number(row.costo_total)           || 0;
+    const ganancia_neta         = Number(row.ganancia_neta)         || 0;
+    const ingresos_brutos       = Number(row.ingresos_brutos)       || 0;
+    const comision_total        = Number(row.comision_total)        || 0;
+    const stock_actual          = Number(row.stock_actual)          || 0;
+    const cantidad_vendida      = Number(row.cantidad_vendida)      || 0;
+    const cantidad_comprada     = Number(row.cantidad_comprada)     || 0;
+    const costo_unitario_prom   = Number(row.costo_unitario_promedio) || 0;
+
+    // ── Margen y ROI ──────────────────────────────────────────────────
+    const margen_pct = costo_total > 0
+      ? Math.round((ganancia_neta / costo_total) * 10000) / 100
+      : 0;
+    const roi = costo_total > 0
+      ? Math.round((ganancia_neta / costo_total) * 10000) / 100
+      : 0;
+
+    // ── Capital invertido (stock valorado al costo promedio) ──────────
+    const capital_invertido = Math.round(stock_actual * costo_unitario_prom * 100) / 100;
+
+    // ── Rotación ──────────────────────────────────────────────────────
+    let rotacion_dias    = null;
+    let ventas_por_dia   = 0;
+    let dias_para_agotar = null;
+    let rotacion_clase   = 'Sin ventas';
+
+    if (row.primera_venta && cantidad_vendida > 0) {
+      const ini = new Date(row.primera_venta).getTime();
+      const fin = new Date(row.ultima_venta).getTime();
+      const dias_periodo = Math.max(1, Math.ceil((fin - ini) / 86400000) + 1);
+      ventas_por_dia = Math.round((cantidad_vendida / dias_periodo) * 100) / 100;
+      rotacion_dias  = Math.round((dias_periodo / cantidad_vendida) * 100) / 100;
+
+      if (stock_actual > 0 && ventas_por_dia > 0) {
+        dias_para_agotar = Math.ceil(stock_actual / ventas_por_dia);
+      } else if (stock_actual === 0) {
+        dias_para_agotar = 0;
+      }
+
+      if      (rotacion_dias < 10)  rotacion_clase = 'Rápido';
+      else if (rotacion_dias <= 30) rotacion_clase = 'Medio';
+      else                           rotacion_clase = 'Lento';
+    }
+
+    // ── Estado del inventario ─────────────────────────────────────────
+    let estado_inventario = 'OK';
+    if      (stock_actual === 0 && cantidad_comprada > 0)              estado_inventario = 'Agotado';
+    else if (dias_para_agotar !== null && dias_para_agotar <= 3)       estado_inventario = 'Crítico';
+    else if (dias_para_agotar !== null && dias_para_agotar <= 10)      estado_inventario = 'Bajo';
+    else if (cantidad_vendida === 0 && stock_actual > 0)               estado_inventario = 'Sin rotación';
+
+    // ── Recomendaciones automáticas ───────────────────────────────────
+    const recomendaciones = [];
+    if (margen_pct <= 0 && cantidad_vendida > 0) {
+      recomendaciones.push({ tipo: 'critico', mensaje: 'Margen 0% o negativo → subir precio o reducir costo de compra' });
+    }
+    if (rotacion_clase === 'Rápido' && stock_actual > 0 && stock_actual < 5) {
+      recomendaciones.push({ tipo: 'urgente', mensaje: `Alta rotación → stock crítico (${stock_actual} uds), reabastecer urgente` });
+    }
+    if (rotacion_clase === 'Lento' && stock_actual > 10) {
+      recomendaciones.push({ tipo: 'medio', mensaje: 'Rotación lenta con alto stock → aplicar descuento o promoción' });
+    }
+    if (capital_invertido > 0 && ganancia_neta <= 0 && cantidad_vendida > 0) {
+      recomendaciones.push({ tipo: 'critico', mensaje: `Alta inversión sin retorno → evaluar eliminar o reformular producto` });
+    }
+    if (estado_inventario === 'Crítico' && dias_para_agotar !== null) {
+      recomendaciones.push({ tipo: 'urgente', mensaje: `Se agota en ${dias_para_agotar} día(s) → reabastecer ahora` });
+    }
+    if (margen_pct > 30 && rotacion_clase === 'Rápido') {
+      recomendaciones.push({ tipo: 'positivo', mensaje: 'Producto estrella: alto margen + alta rotación → mantener y priorizar stock' });
+    }
+    if (margen_pct > 20 && rotacion_clase === 'Lento') {
+      recomendaciones.push({ tipo: 'oportunidad', mensaje: 'Buen margen pero poca rotación → campaña de marketing o descuento temporal' });
+    }
+    if (margen_pct > 0 && margen_pct < 10 && rotacion_clase === 'Rápido') {
+      recomendaciones.push({ tipo: 'medio', mensaje: 'Alta rotación pero margen bajo → revisar precio de venta o negociar mejor costo' });
+    }
+    if (cantidad_vendida === 0 && stock_actual > 0) {
+      recomendaciones.push({ tipo: 'medio', mensaje: 'Sin ventas en el período con stock disponible → revisar precio o visibilidad' });
+    }
+    if (estado_inventario === 'Agotado' && rotacion_clase !== 'Sin ventas') {
+      recomendaciones.push({ tipo: 'urgente', mensaje: 'Producto agotado con historial de ventas → reabastecer para no perder demanda' });
+    }
+
+    // ── Matriz estratégica ────────────────────────────────────────────
+    let matriz_clasificacion = 'Sin datos';
+    if (cantidad_vendida > 0) {
+      const alto_margen  = margen_pct >= 20;
+      const alto_volumen = cantidad_vendida >= Math.max(1, medianaVolumen);
+      if      ( alto_margen &&  alto_volumen) matriz_clasificacion = 'Mantener';
+      else if ( alto_margen && !alto_volumen) matriz_clasificacion = 'Promocionar';
+      else if (!alto_margen &&  alto_volumen) matriz_clasificacion = 'Revisar';
+      else                                    matriz_clasificacion = 'Eliminar';
+    }
+
+    return {
+      id_producto:          row.id_producto,
+      nombre:               row.nombre,
+      imagen:               row.imagen,
+      cantidad_comprada,
+      cantidad_vendida,
+      stock_actual,
+      ingresos_brutos,
+      costo_total,
+      comision_total,
+      ganancia_neta,
+      costo_unitario_promedio: costo_unitario_prom,
+      capital_invertido,
+      margen_pct,
+      roi,
+      rotacion_dias,
+      ventas_por_dia,
+      dias_para_agotar,
+      rotacion_clase,
+      estado_inventario,
+      recomendaciones,
+      matriz_clasificacion,
+      primera_venta: row.primera_venta,
+      ultima_venta:  row.ultima_venta
+    };
+  });
+
+  // ── KPIs globales del portafolio ──────────────────────────────────
+  const capital_inmovilizado_total = productos.reduce((s, p) => s + (p.capital_invertido || 0), 0);
+  const conVentas   = productos.filter(p => p.cantidad_vendida > 0);
+  const margen_prom = conVentas.length ? conVentas.reduce((s, p) => s + p.margen_pct, 0) / conVentas.length : 0;
+  const roi_prom    = conVentas.length ? conVentas.reduce((s, p) => s + p.roi, 0) / conVentas.length : 0;
+  const en_riesgo   = productos.filter(p =>
+    p.margen_pct <= 0 ||
+    p.estado_inventario === 'Crítico' ||
+    p.estado_inventario === 'Agotado' ||
+    (p.rotacion_clase === 'Lento' && p.stock_actual > 10 && p.capital_invertido > 100)
+  ).length;
+
+  return {
+    productos,
+    resumen: {
+      total_productos:            productos.length,
+      capital_inmovilizado_total: Math.round(capital_inmovilizado_total * 100) / 100,
+      margen_promedio:            Math.round(margen_prom * 100) / 100,
+      roi_promedio:               Math.round(roi_prom * 100) / 100,
+      productos_en_riesgo:        en_riesgo,
+      productos_rentables:        productos.filter(p => p.margen_pct > 20).length,
+      total_ingresos:             Math.round(productos.reduce((s, p) => s + p.ingresos_brutos, 0) * 100) / 100,
+      total_ganancia_neta:        Math.round(productos.reduce((s, p) => s + p.ganancia_neta, 0) * 100) / 100
+    }
+  };
+}
+
 module.exports = {
   // Vendedor
   vendedorTopProductos,
@@ -633,6 +892,7 @@ module.exports = {
   vendedorHistorialGanancias,
   vendedorResumenFinanciero,
   vendedorAnalisisInventario,
+  vendedorProductosDetalle,
   // Admin
   adminTopVendedores,
   adminTopProductosGlobal,
