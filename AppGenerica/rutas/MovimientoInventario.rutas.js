@@ -20,4 +20,10 @@ router.get('/resumen', auth, ctrl.resumenFinanciero);
 // GET /movimiento-inventario/factura/:idPedido — Vista tipo factura de un pedido
 router.get('/factura/:idPedido', auth, ctrl.facturaPorPedido);
 
+// GET /movimiento-inventario/productos-con-movimientos — Selector de productos para trazabilidad
+router.get('/productos-con-movimientos', auth, ctrl.productosParaSelector);
+
+// GET /movimiento-inventario/trazabilidad/:id_producto — Trazabilidad FIFO de un producto
+router.get('/trazabilidad/:id_producto', auth, ctrl.trazabilidadProducto);
+
 module.exports = router;

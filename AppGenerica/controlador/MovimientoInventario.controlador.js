@@ -84,6 +84,38 @@ exports.resumenFinanciero = async (req, res) => {
   }
 };
 
+// GET /movimiento-inventario/productos-con-movimientos
+exports.productosParaSelector = async (req, res) => {
+  try {
+    const idVendedor = req.usuario?.id_usuario || req.usuario?.id;
+    if (!idVendedor) return res.status(401).json({ error: 'Vendedor no autenticado' });
+    const productos = await servicio.productosConMovimientos(idVendedor);
+    res.json(productos);
+  } catch (err) {
+    console.error('❌ Error al obtener productos para selector:', err.message);
+    res.status(500).json({ error: 'Error al obtener productos' });
+  }
+};
+
+// GET /movimiento-inventario/trazabilidad/:id_producto
+exports.trazabilidadProducto = async (req, res) => {
+  try {
+    const idVendedor = req.usuario?.id_usuario || req.usuario?.id;
+    if (!idVendedor) return res.status(401).json({ error: 'Vendedor no autenticado' });
+
+    const idProducto = Number(req.params.id_producto);
+    if (!Number.isFinite(idProducto) || idProducto <= 0) {
+      return res.status(400).json({ error: 'ID de producto inválido' });
+    }
+
+    const data = await servicio.trazabilidadProducto(idProducto, idVendedor);
+    res.json(data);
+  } catch (err) {
+    console.error('❌ Error trazabilidad producto:', err.message);
+    res.status(err.status || 500).json({ error: err.message || 'Error al obtener trazabilidad' });
+  }
+};
+
 // GET /movimiento-inventario/factura/:idPedido
 exports.facturaPorPedido = async (req, res) => {
   try {

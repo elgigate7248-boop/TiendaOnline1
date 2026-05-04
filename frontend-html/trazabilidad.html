@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trazabilidad FIFO · Auditoría de Inventario</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="config.js"></script>
+  <style>
+    /* ═══ Base ═══════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* ═══ Header ═════════════════════════════════════════════════════ */
+    .tr-header {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      padding: 1rem 0;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 4px 20px rgba(30,60,114,0.5);
+    }
+    .tr-brand { color: #fff; font-weight: 700; font-size: 1.2rem; text-decoration: none; }
+    .tr-brand:hover { color: rgba(255,255,255,0.85); }
+
+    /* ═══ Selector ════════════════════════════════════════════════════ */
+    .selector-bar {
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 1rem 0;
+    }
+    .selector-bar .form-select,
+    .selector-bar .form-control {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff; border-radius: 10px;
+    }
+    .selector-bar .form-select:focus,
+    .selector-bar .form-control:focus {
+      background: rgba(255,255,255,0.15);
+      border-color: #2a5298;
+      box-shadow: 0 0 0 0.2rem rgba(42,82,152,0.35);
+      color: #fff;
+    }
+    .selector-bar .form-select option { background: #1a1a2e; }
+
+    /* ═══ Loading ════════════════════════════════════════════════════ */
+    #loadingOverlay {
+      position: fixed; inset: 0;
+      background: rgba(15,12,41,0.88);
+      backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 9999; flex-direction: column; gap: 1rem;
+    }
+    .tr-spinner {
+      width: 52px; height: 52px;
+      border: 4px solid rgba(42,82,152,0.2);
+      border-top-color: #2a5298;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══ Main ════════════════════════════════════════════════════════ */
+    .tr-main { padding: 1.5rem 0 4rem; }
+
+    /* ═══ Estado vacío ════════════════════════════════════════════════ */
+    #emptyState {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 50vh; text-align: center; gap: 1rem;
+    }
+    .empty-icon { font-size: 4rem; opacity: 0.2; }
+
+    /* ═══ KPI Cards ══════════════════════════════════════════════════ */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: .75rem; margin-bottom: 1.5rem;
+    }
+    .kpi-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 1rem;
+      transition: transform .2s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-val  { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+    .kpi-lbl  { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .4px;
+                color: rgba(255,255,255,0.5); margin-top: .25rem; }
+    .kpi-ico  { font-size: 1.4rem; opacity: .5; margin-bottom: .4rem; }
+
+    /* ═══ Cabecera de producto ════════════════════════════════════════ */
+    .prod-header {
+      background: rgba(42,82,152,0.15);
+      border: 1px solid rgba(42,82,152,0.3);
+      border-radius: 14px; padding: 1.25rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .prod-img {
+      width: 64px; height: 64px; border-radius: 10px;
+      object-fit: cover; background: rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+    .prod-img-ph {
+      width: 64px; height: 64px; border-radius: 10px;
+      background: rgba(42,82,152,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; flex-shrink: 0;
+    }
+
+    /* ═══ Sección / card ═════════════════════════════════════════════ */
+    .tr-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px; overflow: hidden; margin-bottom: 1.5rem;
+    }
+    .tr-card-header {
+      background: rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: .85rem 1.25rem;
+      font-weight: 600; font-size: .88rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tr-card-body { padding: 1.25rem; }
+
+    /* ═══ Timeline de lotes ══════════════════════════════════════════ */
+    .lote-list { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    .lote-block {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; overflow: hidden;
+    }
+
+    .lote-header {
+      display: flex; flex-wrap: wrap; align-items: center; gap: .75rem;
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .lote-header:hover { background: rgba(255,255,255,0.04); }
+
+    .lote-dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.1);
+    }
+    .dot-disponible { background: #27ae60; box-shadow: 0 0 0 3px rgba(39,174,96,0.2); }
+    .dot-parcial    { background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,0.2); }
+    .dot-agotado    { background: #7f8c8d; box-shadow: 0 0 0 3px rgba(127,140,141,0.2); }
+
+    .lote-id { font-size: .7rem; color: rgba(255,255,255,0.4); font-family: monospace; }
+    .lote-info { flex: 1; min-width: 0; }
+    .lote-title { font-weight: 700; font-size: .95rem; }
+    .lote-subtitle { font-size: .75rem; color: rgba(255,255,255,0.55); margin-top: 1px; }
+
+    .lote-stats {
+      display: flex; gap: .75rem; flex-wrap: wrap;
+      align-items: center;
+    }
+    .lote-stat {
+      text-align: center;
+      background: rgba(255,255,255,0.07);
+      border-radius: 8px; padding: .35rem .65rem;
+    }
+    .lote-stat-val { font-weight: 700; font-size: .88rem; }
+    .lote-stat-lbl { font-size: .6rem; text-transform: uppercase;
+                     color: rgba(255,255,255,0.45); letter-spacing: .3px; }
+
+    /* Barra de progreso de consumo del lote */
+    .lote-progress-wrap { padding: 0 1.25rem .75rem; }
+    .lote-progress-bar {
+      height: 6px; border-radius: 3px;
+      background: rgba(255,255,255,0.1);
+      overflow: hidden;
+    }
+    .lote-progress-fill {
+      height: 100%; border-radius: 3px;
+      transition: width .4s ease;
+    }
+    .lote-progress-label {
+      display: flex; justify-content: space-between;
+      font-size: .68rem; color: rgba(255,255,255,0.4); margin-top: 3px;
+    }
+
+    /* SALIDAs del lote */
+    .salidas-section { border-top: 1px solid rgba(255,255,255,0.06); }
+    .salidas-header {
+      padding: .6rem 1.25rem;
+      font-size: .72rem; text-transform: uppercase; letter-spacing: .4px;
+      color: rgba(255,255,255,0.4);
+      background: rgba(0,0,0,0.15);
+    }
+
+    .salida-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: .75rem;
+      padding: .7rem 1.25rem .7rem 2.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: .82rem;
+      transition: background .1s;
+    }
+    .salida-row:last-child { border-bottom: none; }
+    .salida-row:hover { background: rgba(255,255,255,0.03); }
+
+    .salida-arrow { color: rgba(255,255,255,0.25); flex-shrink: 0; }
+
+    .pedido-badge {
+      background: rgba(42,82,152,0.25);
+      border: 1px solid rgba(42,82,152,0.4);
+      color: #63b3ed; border-radius: 6px;
+      padding: 2px 8px; font-size: .75rem; font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .salida-ganancia { font-weight: 700; }
+    .ganancia-pos { color: #68d391; }
+    .ganancia-neg { color: #fc8181; }
+
+    .salida-meta { color: rgba(255,255,255,0.5); font-size: .75rem; }
+
+    /* Restante del lote (sin venderse aún) */
+    .restante-row {
+      padding: .65rem 1.25rem .65rem 2.25rem;
+      background: rgba(39,174,96,0.06);
+      border-top: 1px solid rgba(39,174,96,0.1);
+      font-size: .8rem; color: rgba(255,255,255,0.7);
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .restante-row i { color: #68d391; }
+
+    /* Lote sin SALIDAs vinculadas */
+    .no-salidas {
+      padding: .8rem 1.25rem .8rem 2.25rem;
+      font-size: .8rem; color: rgba(255,255,255,0.35);
+      font-style: italic;
+    }
+
+    /* ═══ Tabla historial completo ════════════════════════════════════ */
+    .hist-wrap { overflow-x: auto; }
+    .hist-table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      font-size: .8rem;
+    }
+    .hist-table thead th {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.65);
+      font-size: .67rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .4px; padding: .6rem .75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      white-space: nowrap;
+    }
+    .hist-table tbody td {
+      padding: .6rem .75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.82); vertical-align: middle;
+    }
+    .hist-table tbody tr:last-child td { border-bottom: none; }
+    .hist-table tbody tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .row-entrada td { border-left: 3px solid #27ae60; }
+    .row-salida  td { border-left: 3px solid #3498db; }
+
+    .tipo-badge-entrada {
+      background: rgba(39,174,96,0.2); color: #68d391;
+      border: 1px solid rgba(39,174,96,0.3); border-radius: 5px;
+      padding: 2px 8px; font-size: .68rem; font-weight: 700;
+      white-space: nowrap;
+    }
+    .tipo-badge-salida {
+      background: rgba(52,152,219,0.2); color: #63b3ed;
+      border: 1px solid rgba(52,152,219,0.3); border-radius: 5px;
+      padding: 2px 8px; font-size: .68rem; font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .lote-ref {
+      font-family: monospace; font-size: .68rem;
+      color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px; padding: 1px 5px;
+    }
+
+    /* ═══ SALIDAs sin lote (sección aparte) ══════════════════════════ */
+    .sin-lote-alert {
+      background: rgba(243,156,18,0.1);
+      border: 1px solid rgba(243,156,18,0.25);
+      border-radius: 10px; padding: .75rem 1rem;
+      font-size: .82rem; color: #f6ad55;
+      margin-bottom: 1rem;
+    }
+
+    /* ═══ Botones ════════════════════════════════════════════════════ */
+    .btn-tr-primary {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      border: none; color: #fff; border-radius: 9px; font-weight: 500;
+      transition: all .2s;
+    }
+    .btn-tr-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(42,82,152,0.5);
+      color: #fff;
+    }
+    .btn-tr-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    .btn-tr-outline {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.7); border-radius: 8px; font-size: .82rem;
+    }
+    .btn-tr-outline:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+    .btn-collapse-icon { transition: transform .25s; }
+    .collapsed .btn-collapse-icon { transform: rotate(-90deg); }
+
+    /* ═══ Scrollbar ══════════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
+
+    /* ═══ Alertas ════════════════════════════════════════════════════ */
+    .alert { border-radius: 10px; border: none; }
+    .alert-danger  { background: rgba(231,76,60,0.15);  color: #fc8181; }
+    .alert-warning { background: rgba(243,156,18,0.15); color: #f6ad55; }
+    .alert-info    { background: rgba(52,152,219,0.15); color: #63b3ed; }
+
+    /* ═══ Responsive ═════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .lote-stats { gap: .4rem; }
+      .lote-stat  { padding: .25rem .5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Loading ──────────────────────────────────────────────────────── -->
+<div id="loadingOverlay">
+  <div class="tr-spinner"></div>
+  <div class="text-white-50 small">Reconstruyendo trazabilidad FIFO…</div>
+</div>
+
+<!-- ── Header ───────────────────────────────────────────────────────── -->
+<header class="tr-header">
+  <div class="container-fluid px-4">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+      <a href="vendedor.html" class="tr-brand">
+        <i class="fas fa-arrow-left me-2 opacity-75 small"></i>
+        <i class="fas fa-search me-1"></i>Trazabilidad FIFO
+      </a>
+      <div class="vr opacity-25 d-none d-md-block"></div>
+      <span class="text-white-50 small d-none d-md-inline">
+        <i class="fas fa-shield-alt me-1"></i>Auditoría de Inventario por Lote
+      </span>
+      <div class="ms-auto">
+        <button onclick="cerrarSesion()" class="btn btn-tr-outline btn-sm">
+          <i class="fas fa-sign-out-alt me-1"></i>Salir
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Selector de producto ─────────────────────────────────────────── -->
+<div class="selector-bar">
+  <div class="container-fluid px-4">
+    <div class="row g-2 align-items-center">
+      <div class="col-12 col-md-auto">
+        <label class="text-white-50 small mb-1 d-block">
+          <i class="fas fa-box me-1"></i>Selecciona un producto para auditar:
+        </label>
+      </div>
+      <div class="col-12 col-md-5 col-lg-4">
+        <select id="selectorProducto" class="form-select">
+          <option value="">— Cargando productos… —</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button id="btnCargar" class="btn btn-tr-primary" disabled>
+          <i class="fas fa-microscope me-1"></i>Auditar
+        </button>
+      </div>
+      <div class="col-auto">
+        <button id="btnExportar" class="btn btn-tr-outline" style="display:none">
+          <i class="fas fa-file-csv me-1"></i>Exportar CSV
+        </button>
+      </div>
+      <div class="col-auto ms-auto">
+        <span id="errorBanner" class="alert alert-danger py-1 px-3 mb-0 small" style="display:none"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Contenido principal ──────────────────────────────────────────── -->
+<div class="tr-main">
+  <div class="container-fluid px-4">
+
+    <!-- Estado vacío inicial -->
+    <div id="emptyState">
+      <div class="empty-icon"><i class="fas fa-search"></i></div>
+      <h5 class="text-white-50">Selecciona un producto para ver su trazabilidad FIFO</h5>
+      <p class="text-white-50 small">Verás exactamente qué compras se hicieron, cómo se consumieron<br>y en qué pedido fue cada unidad.</p>
+    </div>
+
+    <!-- Contenido de trazabilidad (oculto hasta cargar) -->
+    <div id="traceContent" style="display:none">
+
+      <!-- Cabecera del producto -->
+      <div class="prod-header" id="prodHeader"></div>
+
+      <!-- KPIs -->
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- Error de datos -->
+      <div id="sinLoteWarning" style="display:none"></div>
+
+      <!-- ── BLOQUE 1: Entradas + SALIDAs por lote (Timeline FIFO) ── -->
+      <div class="tr-card">
+        <div class="tr-card-header">
+          <span>
+            <i class="fas fa-layer-group me-2 text-info"></i>
+            Trazabilidad FIFO — Lotes de compra y sus ventas
+          </span>
+          <span class="text-white-50 small" id="totalLotes">0 lotes</span>
+        </div>
+        <div class="tr-card-body">
+          <div class="lote-list" id="loteList"></div>
+        </div>
+      </div>
+
+      <!-- ── BLOQUE 2: SALIDAs sin lote FIFO (fallback) ── -->
+      <div class="tr-card" id="sinLoteCard" style="display:none">
+        <div class="tr-card-header" style="border-left: 3px solid #f39c12;">
+          <span>
+            <i class="fas fa-unlink me-2 text-warning"></i>
+            Ventas sin lote FIFO identificado
+          </span>
+          <span class="badge bg-warning text-dark" id="cntSinLote">0</span>
+        </div>
+        <div class="tr-card-body">
+          <div class="sin-lote-alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Estas ventas se procesaron sin un lote FIFO disponible (el campo <code>costo_compra</code>
+            del producto era el costo de referencia, no un lote real). Se recomienda registrar
+            siempre ENTRADAs antes de confirmar ventas.
+          </div>
+          <div class="hist-wrap">
+            <table class="hist-table">
+              <thead>
+                <tr>
+                  <th>#Mov</th><th>Fecha</th><th>Cantidad</th>
+                  <th>Costo unit.</th><th>Precio venta</th>
+                  <th>Ganancia neta</th><th>Pedido</th><th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody id="sinLoteBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BLOQUE 3: Historial completo ── -->
+      <div class="tr-card">
+        <div class="tr-card-header">
+          <span>
+            <i class="fas fa-history me-2 text-secondary"></i>
+            Historial completo cronológico
+          </span>
+          <div class="d-flex gap-2">
+            <span class="tipo-badge-entrada">ENTRADA</span>
+            <span class="tipo-badge-salida">SALIDA</span>
+          </div>
+        </div>
+        <div class="tr-card-body">
+          <div class="hist-wrap">
+            <table class="hist-table">
+              <thead>
+                <tr>
+                  <th>#Mov</th><th>Fecha</th><th>Tipo</th>
+                  <th>Cant.</th><th>Costo unit.</th><th>Precio venta</th>
+                  <th>Ganancia neta</th><th>Pedido</th><th>Lote ref.</th><th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody id="historialBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /traceContent -->
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── Auth ─────────────────────────────────────────────────────────────
+const _token = localStorage.getItem('token');
+let   _user  = {};
+try { _user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (_) {}
+if (!_token) { location.href = 'login.html'; }
+
+async function fetchAuth(url) {
+  const r = await fetch(API_BASE + url, {
+    headers: { 'Authorization': 'Bearer ' + _token }
+  });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j.error || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+window.cerrarSesion = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  location.href = 'login.html';
+};
+
+// ── Formato ───────────────────────────────────────────────────────────
+const fmt = {
+  moneda : v => '$' + Number(v || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+  num    : v => Number(v || 0).toLocaleString('es-CO'),
+  fecha  : v => v ? new Date(v).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '—',
+  fechaD : v => v ? new Date(v).toLocaleDateString('es-CO') : '—'
+};
+
+// ── Estado ─────────────────────────────────────────────────────────────
+let _data = null;
+
+// ── DOM helpers ────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function loading(show) {
+  $('loadingOverlay').style.display = show ? 'flex' : 'none';
+  $('btnCargar').disabled = show;
+  $('btnCargar').innerHTML = show
+    ? '<i class="fas fa-spinner fa-spin me-1"></i>Auditando…'
+    : '<i class="fas fa-microscope me-1"></i>Auditar';
+}
+
+function setError(msg) {
+  const el = $('errorBanner');
+  el.style.display = msg ? 'block' : 'none';
+  el.textContent   = msg;
+}
+
+// ── Cargar selector de productos ───────────────────────────────────────
+async function cargarSelector() {
+  try {
+    const productos = await fetchAuth('/movimiento-inventario/productos-con-movimientos');
+    const sel = $('selectorProducto');
+    sel.innerHTML = '<option value="">— Selecciona un producto —</option>' +
+      productos.map(p =>
+        `<option value="${p.id_producto}">${p.nombre} (stock: ${p.stock})</option>`
+      ).join('');
+    if (productos.length) $('btnCargar').disabled = false;
+  } catch (e) {
+    $('selectorProducto').innerHTML = '<option>Error al cargar productos</option>';
+    setError(e.message);
+  }
+}
+
+// ── Cargar trazabilidad ────────────────────────────────────────────────
+async function cargarTrazabilidad() {
+  const id = $('selectorProducto').value;
+  if (!id) return;
+
+  loading(true);
+  setError('');
+
+  try {
+    _data = await fetchAuth(`/movimiento-inventario/trazabilidad/${id}`);
+    renderTodo();
+    $('emptyState').style.display   = 'none';
+    $('traceContent').style.display = 'block';
+    $('btnExportar').style.display  = 'inline-block';
+  } catch (e) {
+    setError(e.message);
+  } finally {
+    loading(false);
+  }
+}
+
+// ── Render principal ───────────────────────────────────────────────────
+function renderTodo() {
+  renderProdHeader();
+  renderKPIs();
+  renderLotes();
+  renderSinLote();
+  renderHistorial();
+}
+
+// ── Cabecera producto ──────────────────────────────────────────────────
+function renderProdHeader() {
+  const p = _data.producto;
+  const imgEl = p.imagen
+    ? `<img src="${p.imagen}" class="prod-img" onerror="this.style.display='none'">`
+    : `<div class="prod-img-ph"><i class="fas fa-box"></i></div>`;
+
+  $('prodHeader').innerHTML = `
+    ${imgEl}
+    <div>
+      <h4 class="text-white mb-1">${p.nombre}</h4>
+      <div class="d-flex flex-wrap gap-3">
+        <span class="text-white-50 small"><i class="fas fa-tag me-1"></i>Precio venta: <strong class="text-white">${fmt.moneda(p.precio_venta)}</strong></span>
+        <span class="text-white-50 small"><i class="fas fa-warehouse me-1"></i>Stock sistema: <strong class="text-white">${p.stock_sistema} uds</strong></span>
+        <span class="text-white-50 small"><i class="fas fa-fingerprint me-1"></i>ID: #${p.id_producto}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ── KPIs ───────────────────────────────────────────────────────────────
+function renderKPIs() {
+  const k = _data.kpis;
+  const kpis = [
+    { ico: 'shopping-cart', cls: 'text-info',    val: fmt.num(k.total_comprado),    lbl: 'Uds compradas' },
+    { ico: 'tag',           cls: 'text-success', val: fmt.num(k.total_vendido),     lbl: 'Uds vendidas' },
+    { ico: 'warehouse',     cls: 'text-warning', val: fmt.num(k.stock_fifo),        lbl: 'Stock FIFO real' },
+    { ico: 'layer-group',   cls: 'text-primary', val: k.total_lotes,               lbl: 'Lotes de compra' },
+    { ico: 'check-circle',  cls: 'text-success', val: k.lotes_disponibles,         lbl: 'Lotes disponibles' },
+    { ico: 'clock',         cls: 'text-warning', val: k.lotes_parciales,           lbl: 'Lotes parciales' },
+    { ico: 'times-circle',  cls: 'text-secondary',val: k.lotes_agotados,           lbl: 'Lotes agotados' },
+    { ico: 'coins',         cls: 'text-warning', val: fmt.moneda(k.total_invertido), lbl: 'Total invertido' },
+    { ico: 'dollar-sign',   cls: 'text-success', val: fmt.moneda(k.total_ingresos), lbl: 'Total ingresos' },
+    { ico: 'hand-holding-usd', cls: k.total_ganancia >= 0 ? 'text-success' : 'text-danger',
+                             val: fmt.moneda(k.total_ganancia), lbl: 'Ganancia neta total' }
+  ];
+
+  $('kpiRow').innerHTML = kpis.map(kp => `
+    <div class="kpi-card">
+      <div class="kpi-ico ${kp.cls}"><i class="fas fa-${kp.ico}"></i></div>
+      <div class="kpi-val ${kp.cls}">${kp.val}</div>
+      <div class="kpi-lbl">${kp.lbl}</div>
+    </div>
+  `).join('');
+}
+
+// ── Lotes (Timeline FIFO) ─────────────────────────────────────────────
+function renderLotes() {
+  const lotes = _data.entradas;
+  $('totalLotes').textContent = `${lotes.length} lote(s)`;
+
+  if (!lotes.length) {
+    $('loteList').innerHTML = `
+      <div class="text-center py-5 text-white-50">
+        <i class="fas fa-inbox fa-2x mb-2 opacity-30 d-block"></i>
+        No hay entradas (compras) registradas para este producto.
+      </div>`;
+    return;
+  }
+
+  $('loteList').innerHTML = lotes.map((lote, idx) => {
+    const dotClass = {
+      'Disponible': 'dot-disponible',
+      'Parcial'   : 'dot-parcial',
+      'Agotado'   : 'dot-agotado'
+    }[lote.estado_lote] || 'dot-agotado';
+
+    const estadoBadge = {
+      'Disponible': 'success',
+      'Parcial'   : 'warning',
+      'Agotado'   : 'secondary'
+    }[lote.estado_lote] || 'secondary';
+
+    const collapseId = `lote-collapse-${lote.id_movimiento}`;
+    const isOpen     = idx < 3; // primeros 3 abiertos
+
+    // Barra de progreso de consumo
+    const pct         = lote.pct_consumido;
+    const barColor    = pct >= 100 ? '#7f8c8d' : (pct > 0 ? '#f39c12' : '#27ae60');
+
+    // Salidas del lote
+    const salidasHtml = buildSalidasHtml(lote);
+
+    return `
+      <div class="lote-block">
+        <!-- Header clickeable -->
+        <div class="lote-header" data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+             aria-expanded="${isOpen}" ${isOpen ? '' : 'class="collapsed"'}>
+          <div class="lote-dot ${dotClass}"></div>
+          <div class="lote-info">
+            <div class="lote-title">
+              Lote #${lote.id_movimiento}
+              <span class="badge bg-${estadoBadge} ms-2" style="font-size:.65rem">${lote.estado_lote}</span>
+            </div>
+            <div class="lote-subtitle">
+              <i class="fas fa-calendar me-1"></i>${fmt.fecha(lote.fecha)}
+              ${lote.referencia ? ` · <i class="fas fa-tag me-1"></i>${lote.referencia}` : ''}
+            </div>
+          </div>
+          <div class="lote-stats">
+            <div class="lote-stat">
+              <div class="lote-stat-val text-info">${fmt.num(lote.cantidad_original)}</div>
+              <div class="lote-stat-lbl">Comprado</div>
+            </div>
+            <div class="lote-stat">
+              <div class="lote-stat-val text-success">${fmt.num(lote.cantidad_consumida)}</div>
+              <div class="lote-stat-lbl">Vendido</div>
+            </div>
+            <div class="lote-stat">
+              <div class="lote-stat-val ${lote.cantidad_restante > 0 ? 'text-warning' : 'text-secondary'}">${fmt.num(lote.cantidad_restante)}</div>
+              <div class="lote-stat-lbl">Restante</div>
+            </div>
+            <div class="lote-stat">
+              <div class="lote-stat-val text-warning">${fmt.moneda(lote.costo_unitario)}</div>
+              <div class="lote-stat-lbl">Costo/ud</div>
+            </div>
+            <div class="lote-stat">
+              <div class="lote-stat-val text-danger">${fmt.moneda(lote.inversion_total)}</div>
+              <div class="lote-stat-lbl">Inversión</div>
+            </div>
+          </div>
+          <i class="fas fa-chevron-down btn-collapse-icon text-white-50 ms-2 ${isOpen ? '' : 'collapsed'}"></i>
+        </div>
+
+        <!-- Barra de consumo -->
+        <div class="lote-progress-wrap">
+          <div class="lote-progress-bar">
+            <div class="lote-progress-fill" style="width:${pct}%; background:${barColor}"></div>
+          </div>
+          <div class="lote-progress-label">
+            <span>${pct}% consumido</span>
+            <span>${fmt.num(lote.cantidad_restante)} uds disponibles</span>
+          </div>
+        </div>
+
+        <!-- Detalle colapsable: salidas del lote -->
+        <div class="collapse ${isOpen ? 'show' : ''}" id="${collapseId}">
+          ${salidasHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Sincronizar ícono de chevron con el estado del colapso
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(el => {
+    const target = document.querySelector(el.dataset.bsTarget);
+    if (!target) return;
+    const icon = el.querySelector('.btn-collapse-icon');
+    target.addEventListener('show.bs.collapse', () => {
+      if (icon) icon.style.transform = 'rotate(0deg)';
+    });
+    target.addEventListener('hide.bs.collapse', () => {
+      if (icon) icon.style.transform = 'rotate(-90deg)';
+    });
+  });
+}
+
+function buildSalidasHtml(lote) {
+  const salidas = lote.salidas || [];
+
+  if (!salidas.length) {
+    const noSalida = lote.cantidad_consumida > 0
+      ? `<div class="no-salidas"><i class="fas fa-question-circle me-1"></i>
+           Se consumieron ${lote.cantidad_consumida} uds pero no se encontraron SALIDAs vinculadas a este lote
+           (pueden estar en "Ventas sin lote FIFO" o corresponder a periodos anteriores).</div>`
+      : `<div class="no-salidas"><i class="fas fa-lock me-1"></i>
+           Ninguna unidad de este lote ha sido vendida aún.</div>`;
+
+    const restanteHtml = lote.cantidad_restante > 0
+      ? `<div class="restante-row">
+           <i class="fas fa-box-open"></i>
+           <strong>${fmt.num(lote.cantidad_restante)} uds</strong> disponibles en este lote
+           · Valor retenido: <strong class="text-warning ms-1">${fmt.moneda(lote.costo_unitario * lote.cantidad_restante)}</strong>
+         </div>` : '';
+
+    return `<div class="salidas-section">${noSalida}${restanteHtml}</div>`;
+  }
+
+  const rows = salidas.map(s => {
+    const margen     = s.costo_unitario > 0
+      ? Math.round(((s.precio_venta - s.costo_unitario) / s.costo_unitario) * 10000) / 100
+      : 0;
+    const ganCls     = s.ganancia_neta >= 0 ? 'ganancia-pos' : 'ganancia-neg';
+    return `
+      <div class="salida-row">
+        <i class="fas fa-arrow-right salida-arrow"></i>
+        <span class="pedido-badge">
+          <i class="fas fa-receipt me-1"></i>Pedido #${s.id_pedido || '—'}
+        </span>
+        <span class="text-white-50 small">${fmt.fechaD(s.fecha)}</span>
+        <span><strong>${fmt.num(s.cantidad)}</strong> <span class="text-white-50">uds</span></span>
+        <span class="text-white-50">·</span>
+        <span class="salida-meta">Costo: <strong>${fmt.moneda(s.costo_unitario)}/ud</strong></span>
+        <span class="text-white-50">→</span>
+        <span class="salida-meta">Venta: <strong>${fmt.moneda(s.precio_venta)}/ud</strong></span>
+        <span class="text-white-50">·</span>
+        <span class="salida-ganancia ${ganCls}">
+          <i class="fas fa-${s.ganancia_neta >= 0 ? 'arrow-up' : 'arrow-down'} me-1 small"></i>
+          ${fmt.moneda(s.ganancia_neta)} netos
+        </span>
+        <span class="text-white-50 small ms-auto">(margen: ${margen}%)</span>
+      </div>`;
+  }).join('');
+
+  const restanteHtml = lote.cantidad_restante > 0
+    ? `<div class="restante-row">
+         <i class="fas fa-box-open"></i>
+         <strong>${fmt.num(lote.cantidad_restante)} uds restantes</strong> sin vender
+         · Capital retenido: <strong class="text-warning ms-1">${fmt.moneda(lote.costo_unitario * lote.cantidad_restante)}</strong>
+       </div>` : '';
+
+  return `
+    <div class="salidas-section">
+      <div class="salidas-header">
+        <i class="fas fa-receipt me-1"></i>
+        Ventas vinculadas a este lote (${salidas.length})
+      </div>
+      ${rows}
+      ${restanteHtml}
+    </div>`;
+}
+
+// ── SALIDAs sin lote ──────────────────────────────────────────────────
+function renderSinLote() {
+  const sinLote = _data.salidas_sin_lote || [];
+  if (!sinLote.length) {
+    $('sinLoteCard').style.display = 'none';
+    return;
+  }
+  $('sinLoteCard').style.display = 'block';
+  $('cntSinLote').textContent    = sinLote.length;
+
+  $('sinLoteBody').innerHTML = sinLote.map(s => `
+    <tr>
+      <td class="text-white-50 font-monospace small">#${s.id_movimiento}</td>
+      <td>${fmt.fecha(s.fecha)}</td>
+      <td>${fmt.num(s.cantidad)}</td>
+      <td>${fmt.moneda(s.costo_unitario)}</td>
+      <td>${fmt.moneda(s.precio_venta)}</td>
+      <td class="${s.ganancia_neta >= 0 ? 'text-success' : 'text-danger'} fw-bold">
+        ${fmt.moneda(s.ganancia_neta)}
+      </td>
+      <td>${s.id_pedido ? `<span class="pedido-badge">#${s.id_pedido}</span>` : '—'}</td>
+      <td class="text-white-50 small">${s.observaciones || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+// ── Historial completo ────────────────────────────────────────────────
+function renderHistorial() {
+  const hist = _data.historial || [];
+
+  $('historialBody').innerHTML = hist.map(h => {
+    const isEntrada = h.tipo === 'ENTRADA';
+    const rowCls    = isEntrada ? 'row-entrada' : 'row-salida';
+    const tipoBadge = isEntrada
+      ? '<span class="tipo-badge-entrada">ENTRADA</span>'
+      : '<span class="tipo-badge-salida">SALIDA</span>';
+
+    const loteRef = !isEntrada && h.lote_origen_id
+      ? `<span class="lote-ref">Lote #${h.lote_origen_id}</span>`
+      : (isEntrada ? `<span class="lote-ref">Este lote</span>` : '<span class="text-white-50">Sin lote</span>');
+
+    const ganancia = !isEntrada
+      ? `<span class="${h.ganancia_neta >= 0 ? 'text-success' : 'text-danger'} fw-semibold">${fmt.moneda(h.ganancia_neta)}</span>`
+      : '—';
+
+    return `
+      <tr class="${rowCls}">
+        <td class="text-white-50 font-monospace small">#${h.id_movimiento}</td>
+        <td class="small">${fmt.fecha(h.fecha)}</td>
+        <td>${tipoBadge}</td>
+        <td class="fw-semibold">${fmt.num(h.cantidad)}</td>
+        <td>${fmt.moneda(h.costo_unitario)}</td>
+        <td>${h.precio_venta != null ? fmt.moneda(h.precio_venta) : '—'}</td>
+        <td>${ganancia}</td>
+        <td>${h.id_pedido ? `<span class="pedido-badge">#${h.id_pedido}</span>` : '—'}</td>
+        <td>${loteRef}</td>
+        <td class="text-white-50 small" style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis"
+            title="${(h.observaciones || '').replace(/"/g, '&quot;')}">
+          ${h.observaciones || '—'}
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+// ── Exportar CSV ──────────────────────────────────────────────────────
+function exportarCSV() {
+  if (!_data) return;
+  const nombre  = _data.producto.nombre.replace(/[^a-z0-9]/gi, '_');
+  const headers = ['#Mov','Fecha','Tipo','Cantidad','Costo_unit','Precio_venta','Ganancia_neta','Pedido','Lote_ref','Observaciones'];
+  const rows    = _data.historial.map(h => [
+    h.id_movimiento,
+    fmt.fecha(h.fecha),
+    h.tipo,
+    h.cantidad,
+    h.costo_unitario,
+    h.precio_venta ?? '',
+    h.ganancia_neta ?? '',
+    h.id_pedido ?? '',
+    h.lote_origen_id ?? '',
+    (h.observaciones || '').replace(/,/g, ';')
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const a   = document.createElement('a');
+  a.href    = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `trazabilidad_${nombre}.csv`;
+  a.click();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+document.getElementById('btnCargar').addEventListener('click', cargarTrazabilidad);
+document.getElementById('btnExportar').addEventListener('click', exportarCSV);
+document.getElementById('selectorProducto').addEventListener('change', () => {
+  $('btnCargar').disabled = !$('selectorProducto').value;
+  // Si cambia el selector, ocultar contenido anterior
+  if (_data) {
+    $('traceContent').style.display = 'none';
+    $('emptyState').style.display   = 'flex';
+    $('btnExportar').style.display  = 'none';
+    _data = null;
+  }
+});
+
+// Cargar URL param ?id_producto=X directamente
+function initFromURL() {
+  const params     = new URLSearchParams(location.search);
+  const idParam    = params.get('id_producto');
+  if (idParam) {
+    const sel = $('selectorProducto');
+    // Intentar seleccionar tras cargar el selector
+    const intervalId = setInterval(() => {
+      const opt = sel.querySelector(`option[value="${idParam}"]`);
+      if (opt) {
+        sel.value = idParam;
+        $('btnCargar').disabled = false;
+        cargarTrazabilidad();
+        clearInterval(intervalId);
+      }
+    }, 100);
+    setTimeout(() => clearInterval(intervalId), 3000);
+  }
+}
+
+cargarSelector().then(initFromURL);
+</script>
+</body>
+</html>

@@ -490,6 +490,229 @@ async function facturaPorPedido(idPedido, idVendedor) {
   };
 }
 
+// ─── TRAZABILIDAD FIFO ───
+
+/**
+ * Devuelve la trazabilidad completa de un producto para un vendedor:
+ *   - Todas sus ENTRADAs (lotes) con cantidades originales y restantes
+ *   - Para cada ENTRADA, las SALIDAs que consumieron ese lote (vinculadas
+ *     por el campo observaciones: "FIFO lote #<id>")
+ *   - SALIDAs sin lote identificado (fallback) agrupadas aparte
+ *   - Historial completo (ENTRADA + SALIDA) ordenado cronológicamente
+ *
+ * @param {number} idProducto
+ * @param {number} idVendedor
+ * @returns {Object}
+ */
+async function trazabilidadProducto(idProducto, idVendedor) {
+  // ── 1. Info del producto ────────────────────────────────────────────
+  const [[producto]] = await db.execute(
+    `SELECT id_producto, nombre, imagen, precio, costo_compra, stock, id_vendedor
+     FROM producto WHERE id_producto = ? AND id_vendedor = ?`,
+    [idProducto, idVendedor]
+  );
+  if (!producto) {
+    const err = new Error('Producto no encontrado o no te pertenece');
+    err.status = 404;
+    throw err;
+  }
+
+  // ── 2. Todas las ENTRADAs del producto ──────────────────────────────
+  const [entradas] = await db.execute(
+    `SELECT
+       id_movimiento,
+       fecha,
+       cantidad,
+       costo_unitario,
+       cantidad_restante,
+       referencia,
+       observaciones
+     FROM movimiento_inventario
+     WHERE id_producto = ? AND id_vendedor = ? AND tipo_movimiento = 'ENTRADA'
+     ORDER BY fecha ASC, id_movimiento ASC`,
+    [idProducto, idVendedor]
+  );
+
+  // ── 3. Todas las SALIDAs del producto ───────────────────────────────
+  const [salidas] = await db.execute(
+    `SELECT
+       m.id_movimiento,
+       m.fecha,
+       m.cantidad,
+       m.costo_unitario,
+       m.precio_venta_unit,
+       m.id_pedido,
+       m.ganancia_bruta,
+       m.comision_plataforma,
+       m.ganancia_neta,
+       m.observaciones,
+       m.referencia
+     FROM movimiento_inventario m
+     WHERE m.id_producto = ? AND m.id_vendedor = ? AND m.tipo_movimiento = 'SALIDA'
+     ORDER BY m.fecha ASC, m.id_movimiento ASC`,
+    [idProducto, idVendedor]
+  );
+
+  // ── 4. Parsear lote_origen de observaciones ─────────────────────────
+  // Formato esperado: "FIFO lote #123 — Pedido #45"
+  // Regex extrae el primer número luego de "lote #"
+  const LOTE_RE = /lote\s*#(\d+)/i;
+
+  const salidasConLote    = [];
+  const salidasSinLote    = [];
+
+  salidas.forEach(s => {
+    const match = LOTE_RE.exec(s.observaciones || '');
+    if (match) {
+      salidasConLote.push({ ...s, lote_origen_id: Number(match[1]) });
+    } else {
+      salidasSinLote.push({ ...s, lote_origen_id: null });
+    }
+  });
+
+  // ── 5. Agrupar SALIDAs por lote ─────────────────────────────────────
+  const salidasPorLote = {};
+  salidasConLote.forEach(s => {
+    const k = s.lote_origen_id;
+    if (!salidasPorLote[k]) salidasPorLote[k] = [];
+    salidasPorLote[k].push({
+      id_movimiento  : s.id_movimiento,
+      fecha          : s.fecha,
+      cantidad       : Number(s.cantidad),
+      costo_unitario : Number(s.costo_unitario),
+      precio_venta   : Number(s.precio_venta_unit),
+      id_pedido      : s.id_pedido,
+      ganancia_bruta : Number(s.ganancia_bruta),
+      comision       : Number(s.comision_plataforma),
+      ganancia_neta  : Number(s.ganancia_neta)
+    });
+  });
+
+  // ── 6. Construir entradas enriquecidas ──────────────────────────────
+  const entradasEnriquecidas = entradas.map(e => {
+    const cantidad_original  = Number(e.cantidad);
+    const cantidad_restante  = Number(e.cantidad_restante);
+    const cantidad_consumida = cantidad_original - cantidad_restante;
+    const salidas_del_lote   = salidasPorLote[e.id_movimiento] || [];
+
+    // Suma de cantidades de SALIDAs vinculadas (para detectar discrepancias)
+    const consumido_por_salidas = salidas_del_lote.reduce((s, x) => s + x.cantidad, 0);
+
+    return {
+      id_movimiento     : e.id_movimiento,
+      fecha             : e.fecha,
+      cantidad_original,
+      cantidad_restante,
+      cantidad_consumida,
+      consumido_por_salidas,
+      costo_unitario    : Number(e.costo_unitario),
+      inversion_total   : Math.round(Number(e.costo_unitario) * cantidad_original * 100) / 100,
+      referencia        : e.referencia,
+      observaciones     : e.observaciones,
+      pct_consumido     : cantidad_original > 0
+        ? Math.round((cantidad_consumida / cantidad_original) * 10000) / 100
+        : 0,
+      estado_lote       : cantidad_restante === 0
+        ? 'Agotado'
+        : (cantidad_restante < cantidad_original ? 'Parcial' : 'Disponible'),
+      salidas           : salidas_del_lote
+    };
+  });
+
+  // ── 7. Historial completo (ENTRADA + SALIDA mezclados) ──────────────
+  const historial = [
+    ...entradas.map(e => ({
+      id_movimiento : e.id_movimiento,
+      fecha         : e.fecha,
+      tipo          : 'ENTRADA',
+      cantidad      : Number(e.cantidad),
+      costo_unitario: Number(e.costo_unitario),
+      precio_venta  : null,
+      ganancia_neta : null,
+      id_pedido     : null,
+      observaciones : e.observaciones,
+      referencia    : e.referencia
+    })),
+    ...salidas.map(s => ({
+      id_movimiento : s.id_movimiento,
+      fecha         : s.fecha,
+      tipo          : 'SALIDA',
+      cantidad      : Number(s.cantidad),
+      costo_unitario: Number(s.costo_unitario),
+      precio_venta  : Number(s.precio_venta_unit),
+      ganancia_neta : Number(s.ganancia_neta),
+      id_pedido     : s.id_pedido,
+      lote_origen_id: LOTE_RE.exec(s.observaciones || '') ? Number(LOTE_RE.exec(s.observaciones)[1]) : null,
+      observaciones : s.observaciones,
+      referencia    : s.referencia
+    }))
+  ].sort((a, b) => new Date(a.fecha) - new Date(b.fecha) || a.id_movimiento - b.id_movimiento);
+
+  // ── 8. KPIs del portafolio del producto ─────────────────────────────
+  const totalComprado  = entradas.reduce((s, e) => s + Number(e.cantidad), 0);
+  const totalVendido   = salidas.reduce((s, x)  => s + Number(x.cantidad), 0);
+  const totalStockFIFO = entradas.reduce((s, e) => s + Number(e.cantidad_restante), 0);
+  const totalInvertido = entradas.reduce((s, e) => s + Number(e.costo_unitario) * Number(e.cantidad), 0);
+  const totalIngresos  = salidas.reduce((s, x)  => s + Number(x.precio_venta_unit) * Number(x.cantidad), 0);
+  const totalGanancia  = salidas.reduce((s, x)  => s + Number(x.ganancia_neta), 0);
+
+  return {
+    producto: {
+      id_producto  : producto.id_producto,
+      nombre       : producto.nombre,
+      imagen       : producto.imagen,
+      precio_venta : Number(producto.precio),
+      stock_sistema: Number(producto.stock)
+    },
+    kpis: {
+      total_comprado   : totalComprado,
+      total_vendido    : totalVendido,
+      stock_fifo       : totalStockFIFO,
+      total_lotes      : entradas.length,
+      lotes_agotados   : entradasEnriquecidas.filter(e => e.estado_lote === 'Agotado').length,
+      lotes_parciales  : entradasEnriquecidas.filter(e => e.estado_lote === 'Parcial').length,
+      lotes_disponibles: entradasEnriquecidas.filter(e => e.estado_lote === 'Disponible').length,
+      total_invertido  : Math.round(totalInvertido * 100) / 100,
+      total_ingresos   : Math.round(totalIngresos * 100) / 100,
+      total_ganancia   : Math.round(totalGanancia * 100) / 100,
+      salidas_sin_lote : salidasSinLote.length
+    },
+    entradas: entradasEnriquecidas,
+    salidas_sin_lote: salidasSinLote.map(s => ({
+      id_movimiento : s.id_movimiento,
+      fecha         : s.fecha,
+      cantidad      : Number(s.cantidad),
+      costo_unitario: Number(s.costo_unitario),
+      precio_venta  : Number(s.precio_venta_unit),
+      id_pedido     : s.id_pedido,
+      ganancia_neta : Number(s.ganancia_neta),
+      observaciones : s.observaciones
+    })),
+    historial
+  };
+}
+
+/**
+ * Devuelve lista de productos del vendedor con sus lotes de inventario,
+ * para poblar el selector de trazabilidad.
+ */
+async function productosConMovimientos(idVendedor) {
+  const [rows] = await db.execute(
+    `SELECT DISTINCT
+       p.id_producto,
+       p.nombre,
+       p.imagen,
+       p.stock
+     FROM producto p
+     INNER JOIN movimiento_inventario m ON m.id_producto = p.id_producto
+     WHERE p.id_vendedor = ?
+       AND m.id_vendedor = ?
+     ORDER BY p.nombre ASC`,
+    [idVendedor, idVendedor]
+  );
+  return rows;
+}
+
 /**
  * Verifica si ya se registraron salidas para un pedido.
  */
@@ -508,5 +731,7 @@ module.exports = {
   listarPorVendedor,
   resumenFinanciero,
   facturaPorPedido,
-  existenSalidasParaPedido
+  existenSalidasParaPedido,
+  trazabilidadProducto,
+  productosConMovimientos
 };
